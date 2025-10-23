@@ -19,6 +19,7 @@ idf.py build && idf.py -p PORT flash
 
 **see command output**
 idf.py monitor
+CTRL+] to stop
 
 **erase flash -> optional**
 idf.py -p PORT erase-flash
