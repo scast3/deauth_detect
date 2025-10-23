@@ -1,0 +1,2 @@
+source /home/wally/School/CSCI572/esp32_sensor_firmware/build/bootloader/gdbinit/symbols
+source /home/wally/School/CSCI572/esp32_sensor_firmware/build/bootloader/gdbinit/connect
