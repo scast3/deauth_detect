@@ -11,8 +11,11 @@ idf.py set-target esp32
 idf.py menuconfig
 Component config > Sniffer Configuration > WiFi Channel
 
-**clean, build, and flash**
-idf.py fullclean && idf.py build && idf.py -p PORT flash
+**clean**
+idf.py fullclean
+
+**build and flash**
+idf.py build && idf.py -p PORT flash
 
 **see command output**
 idf.py monitor
