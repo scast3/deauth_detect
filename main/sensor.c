@@ -5,11 +5,12 @@
 #include "freertos/task.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
+#include <stdint.h>
 #include <stdio.h>
-#include <string.h> // For memcpy
+#include <string.h>
 
-static const int DEAUTH_THRESH = 500;
-static const int TIME_WIND_MS = 10000;
+static const int DEAUTH_THRESH = 1000; // Tune this
+static const int TIME_WIND_MS = 10000; // Tune this
 static const int64_t TIME_WIND_US = (int64_t)TIME_WIND_MS * 1000LL;
 #define MAX_DEAUTH_BUFFER 1024
 
@@ -18,7 +19,13 @@ static int64_t deauth_times[MAX_DEAUTH_BUFFER];
 static int deauth_head = 0;
 static int deauth_tail = 0;
 
+typedef struct {
+  uint8_t attack_mac[6];
+  int8_t attack_rssi;
+} deauth_alert_t;
+
 // Flash helper function
+// Apply settings
 void init_nvs() {
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -31,20 +38,18 @@ void init_nvs() {
 
 // Sniff for deauth frames
 // Alert if number of deauth frames exceed threshold within time window
+// Core
 void wifi_sniffer_packet_handler(void *buf, wifi_promiscuous_pkt_type_t type) {
   if (type != WIFI_PKT_MGMT)
     return;
 
   const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
 
-  // Check minimum length for management frame header (24 bytes)
   if (ppkt->rx_ctrl.sig_len < 24)
     return;
 
-  // Extract frame control (bytes 0-1)
   uint16_t frame_ctrl = (ppkt->payload[1] << 8) | ppkt->payload[0];
 
-  // Extract type and subtype
   uint8_t type_field = (frame_ctrl >> 2) & 0x3;
   uint8_t subtype = (frame_ctrl >> 4) & 0xF;
 
@@ -53,7 +58,6 @@ void wifi_sniffer_packet_handler(void *buf, wifi_promiscuous_pkt_type_t type) {
   if (subtype != 0xC) // 0xC == deauth
     return;
 
-  // Extract MAC addresses
   uint8_t recv_mac[6];
   memcpy(recv_mac, &ppkt->payload[4], 6);
   uint8_t send_mac[6];
@@ -62,41 +66,42 @@ void wifi_sniffer_packet_handler(void *buf, wifi_promiscuous_pkt_type_t type) {
   total_deauths++;
   int64_t now = esp_timer_get_time();
 
-  // Prune old timestamps outside the window
   while (deauth_head != deauth_tail &&
          deauth_times[deauth_head] < now - TIME_WIND_US) {
     deauth_head = (deauth_head + 1) % MAX_DEAUTH_BUFFER;
   }
 
-  // If buffer is full, overwrite the oldest
   if ((deauth_tail + 1) % MAX_DEAUTH_BUFFER == deauth_head) {
     deauth_head = (deauth_head + 1) % MAX_DEAUTH_BUFFER;
   }
 
-  // Add new timestamp
   deauth_times[deauth_tail] = now;
   deauth_tail = (deauth_tail + 1) % MAX_DEAUTH_BUFFER;
 
-  // Calculate current count in window
   int current_count = (deauth_tail >= deauth_head)
                           ? deauth_tail - deauth_head
                           : deauth_tail - deauth_head + MAX_DEAUTH_BUFFER;
 
+  // Alert
+  // Construct alert and reset buffer
   if (current_count >= DEAUTH_THRESH) {
-    printf("DEAUTHENTICATION THRESHOLD EXCEEDED. DEAUTHENTICATION ATTACK "
-           "DETECTED\n");
-    // Reset buffer after alert
+    deauth_alert_t *alert = malloc(sizeof(*alert));
+    memcpy(alert->attack_mac, send_mac, sizeof(alert->attack_mac));
+    alert->attack_rssi = ppkt->rx_ctrl.rssi;
+
+    printf("=============================================================\n"
+           "De-authentication frame rate exceeded!\n"
+           "De-authentication attack detected!\n"
+           "Frame rate (deauth frames/s) = %d\n"
+           "RSSI = %d\n"
+           "Attacker MAC = %02x:%02x:%02x:%02x:%02x:%02x\n",
+           DEAUTH_THRESH / (TIME_WIND_MS / 1000), alert->attack_rssi,
+           alert->attack_mac[0], alert->attack_mac[1], alert->attack_mac[2],
+           alert->attack_mac[3], alert->attack_mac[4], alert->attack_mac[5]);
+
+    free(alert);
     deauth_head = deauth_tail = 0;
   }
-
-  // Print packet details
-  printf("DEAUTH #%d CH=%02d RSSI=%d\n"
-         "  SA=%02x:%02x:%02x:%02x:%02x:%02x\n"
-         "  DA=%02x:%02x:%02x:%02x:%02x:%02x\n",
-         total_deauths, ppkt->rx_ctrl.channel, ppkt->rx_ctrl.rssi, send_mac[0],
-         send_mac[1], send_mac[2], send_mac[3], send_mac[4], send_mac[5],
-         recv_mac[0], recv_mac[1], recv_mac[2], recv_mac[3], recv_mac[4],
-         recv_mac[5]);
 }
 
 // Initialize in promiscuous mode
