@@ -1,4 +1,5 @@
 #include "esp_event.h"
+#include "esp_now.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/task.h"
@@ -8,10 +9,23 @@
 #include <stdio.h>
 #include <string.h>
 
-// Optional: print less frequently
-#define PRINT_EVERY_N_PACKETS 1
+static const int DEAUTH_THRESH = 1000; // Tune this
+static const int TIME_WIND_MS = 10000; // Tune this
+static const int64_t TIME_WIND_US = (int64_t)TIME_WIND_MS * 1000LL;
+#define MAX_DEAUTH_BUFFER 1024
+
+static volatile int total_deauths = 0;
+static int64_t deauth_times[MAX_DEAUTH_BUFFER];
+static int deauth_head = 0;
+static int deauth_tail = 0;
+
+typedef struct {
+  uint8_t attack_mac[6];
+  int8_t attack_rssi;
+} deauth_alert_t;
 
 // Flash helper function
+// Apply settings
 void init_nvs() {
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -22,93 +36,75 @@ void init_nvs() {
   ESP_ERROR_CHECK(ret);
 }
 
-// --- Helper functions ---
-static const char *wifi_pkt_type_name(wifi_promiscuous_pkt_type_t type) {
-  switch (type) {
-  case WIFI_PKT_MGMT:
-    return "Management";
-  case WIFI_PKT_CTRL:
-    return "Control";
-  case WIFI_PKT_DATA:
-    return "Data";
-  case WIFI_PKT_MISC:
-    return "Misc";
-  default:
-    return "Unknown";
-  }
-}
-
-static const char *mgmt_subtype_name(uint8_t subtype) {
-  switch (subtype) {
-  case 0x0:
-    return "Association Request";
-  case 0x1:
-    return "Association Response";
-  case 0x2:
-    return "Reassociation Request";
-  case 0x3:
-    return "Reassociation Response";
-  case 0x4:
-    return "Probe Request";
-  case 0x5:
-    return "Probe Response";
-  case 0x8:
-    return "Beacon";
-  case 0xA:
-    return "Disassociation";
-  case 0xB:
-    return "Authentication";
-  case 0xC:
-    return "Deauthentication";
-  default:
-    return "Other Management";
-  }
-}
-
-// --- Main packet handler ---
+// Sniff for deauth frames
+// Alert if number of deauth frames exceed threshold within time window
+// Core
 void wifi_sniffer_packet_handler(void *buf, wifi_promiscuous_pkt_type_t type) {
-  const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
-  const uint8_t *payload = ppkt->payload;
-  int len = ppkt->rx_ctrl.sig_len;
-
-  if (len < 24)
-    return; // too short to parse
-
-  // Extract 802.11 frame control fields
-  uint16_t frame_ctrl = (payload[1] << 8) | payload[0];
-  uint8_t frame_type = (frame_ctrl >> 2) & 0x3;
-  uint8_t frame_subtype = (frame_ctrl >> 4) & 0xF;
-
-  // Extract MAC addresses if available
-  uint8_t addr1[6], addr2[6], addr3[6];
-  memcpy(addr1, &payload[4], 6);  // destination
-  memcpy(addr2, &payload[10], 6); // source
-  memcpy(addr3, &payload[16], 6); // BSSID (if present)
-
-  static int pkt_counter = 0;
-  if (++pkt_counter % PRINT_EVERY_N_PACKETS != 0)
+  if (type != WIFI_PKT_MGMT)
     return;
 
-  printf("=============================================================\n");
-  printf("Frame #%d\n", pkt_counter);
-  printf("Type: %s (%d) | Subtype: %d ", wifi_pkt_type_name(type),
-         frame_type, frame_subtype);
-  if (type == WIFI_PKT_MGMT)
-    printf("(%s)\n", mgmt_subtype_name(frame_subtype));
-  else
-    printf("\n");
+  const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
 
-  printf("RSSI: %d dBm | Length: %d bytes\n", ppkt->rx_ctrl.rssi, len);
+  if (ppkt->rx_ctrl.sig_len < 24)
+    return;
 
-  printf("Source      : %02x:%02x:%02x:%02x:%02x:%02x\n",
-         addr2[0], addr2[1], addr2[2], addr2[3], addr2[4], addr2[5]);
-  printf("Destination : %02x:%02x:%02x:%02x:%02x:%02x\n",
-         addr1[0], addr1[1], addr1[2], addr1[3], addr1[4], addr1[5]);
-  printf("BSSID       : %02x:%02x:%02x:%02x:%02x:%02x\n",
-         addr3[0], addr3[1], addr3[2], addr3[3], addr3[4], addr3[5]);
+  uint16_t frame_ctrl = (ppkt->payload[1] << 8) | ppkt->payload[0];
+
+  uint8_t type_field = (frame_ctrl >> 2) & 0x3;
+  uint8_t subtype = (frame_ctrl >> 4) & 0xF;
+
+  if (type_field != 0)
+    return;
+  if (subtype != 0xC) // 0xC == deauth
+    return;
+
+  uint8_t recv_mac[6];
+  memcpy(recv_mac, &ppkt->payload[4], 6);
+  uint8_t send_mac[6];
+  memcpy(send_mac, &ppkt->payload[10], 6);
+
+  total_deauths++;
+  int64_t now = esp_timer_get_time();
+
+  while (deauth_head != deauth_tail &&
+         deauth_times[deauth_head] < now - TIME_WIND_US) {
+    deauth_head = (deauth_head + 1) % MAX_DEAUTH_BUFFER;
+  }
+
+  if ((deauth_tail + 1) % MAX_DEAUTH_BUFFER == deauth_head) {
+    deauth_head = (deauth_head + 1) % MAX_DEAUTH_BUFFER;
+  }
+
+  deauth_times[deauth_tail] = now;
+  deauth_tail = (deauth_tail + 1) % MAX_DEAUTH_BUFFER;
+
+  int current_count = (deauth_tail >= deauth_head)
+                          ? deauth_tail - deauth_head
+                          : deauth_tail - deauth_head + MAX_DEAUTH_BUFFER;
+
+  // Alert
+  // Construct alert and reset buffer
+  if (current_count >= DEAUTH_THRESH) {
+    deauth_alert_t *alert = malloc(sizeof(*alert));
+    memcpy(alert->attack_mac, send_mac, sizeof(alert->attack_mac));
+    alert->attack_rssi = ppkt->rx_ctrl.rssi;
+
+    printf("=============================================================\n"
+           "De-authentication frame rate exceeded!\n"
+           "De-authentication attack detected!\n"
+           "Frame rate (deauth frames/s) = %d\n"
+           "RSSI = %d\n"
+           "Attacker MAC = %02x:%02x:%02x:%02x:%02x:%02x\n",
+           DEAUTH_THRESH / (TIME_WIND_MS / 1000), alert->attack_rssi,
+           alert->attack_mac[0], alert->attack_mac[1], alert->attack_mac[2],
+           alert->attack_mac[3], alert->attack_mac[4], alert->attack_mac[5]);
+
+    free(alert);
+    deauth_head = deauth_tail = 0;
+  }
 }
 
-// --- Initialize in promiscuous mode ---
+// Initialize in promiscuous mode
 void init_wifi_sniffer() {
   init_nvs();
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -119,7 +115,6 @@ void init_wifi_sniffer() {
       esp_wifi_set_channel(CONFIG_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE));
   ESP_ERROR_CHECK(esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_packet_handler));
   ESP_ERROR_CHECK(esp_wifi_start());
-
   printf("Sniffer is running on channel %d\n", CONFIG_WIFI_CHANNEL);
 }
 
@@ -127,7 +122,7 @@ void app_main(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   init_wifi_sniffer();
 
-  printf("Sniffer is running in monitor mode. Capturing all packets...\n");
+  printf("Sniffer is running in monitor mode. Capturing packets...\n");
 
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(5000)); // Keep the task alive
