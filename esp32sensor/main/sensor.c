@@ -24,6 +24,7 @@ static int64_t deauth_times[MAX_DEAUTH_BUFFER];
 static int deauth_head = 0;
 static int deauth_tail = 0;
 uint8_t gateway_address[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 // Initialize variables for ESP-NOW
 static QueueHandle_t alert_queue = NULL;
 static esp_now_peer_info_t peer_info;
@@ -46,13 +47,13 @@ void init_nvs() {
   ESP_ERROR_CHECK(ret);
 }
 
-// ESP-NOW send callback function
+// ESP-NOW sending callback function
 void send_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
   printf("\r\nLast Packet Send Status:\t%s\n",
          status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
-// Function to send data over ESP-NOW
+// Helper function send data over ESP-NOW
 void espnow_sender_task(void *arg) {
   deauth_alert_t alert;
   while (1) {
@@ -70,7 +71,9 @@ void espnow_sender_task(void *arg) {
 
 // Callback each time a packet is received
 // Core of sensor system
-void wifi_sniffer_packet_handler(void *buf, wifi_promiscuous_pkt_type_t type) {
+// Promiscuous mode core
+void wifi_promiscuous_packet_handler(void *buf,
+                                     wifi_promiscuous_pkt_type_t type) {
   if (type != WIFI_PKT_MGMT)
     return;
 
@@ -126,6 +129,15 @@ void wifi_sniffer_packet_handler(void *buf, wifi_promiscuous_pkt_type_t type) {
   }
 }
 
+// Inialize:
+//   WiFi Config
+//   WiFi mode (station)
+//   WiFi promiscuous mode
+//   WiFi channel
+//   Promiscuous callback function
+//   Start WiFi
+//   ESP-NOW
+//   ESP-NOW sending callback function
 void init_wifi_sniffer() {
   init_nvs();
 
@@ -136,7 +148,8 @@ void init_wifi_sniffer() {
   // ESP_ERROR_CHECK(esp_wifi_set_promiscuous_filter(WIFI_PKT_MGMT));
   ESP_ERROR_CHECK(
       esp_wifi_set_channel(CONFIG_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE));
-  ESP_ERROR_CHECK(esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_packet_handler));
+  ESP_ERROR_CHECK(
+      esp_wifi_set_promiscuous_rx_cb(wifi_promiscuous_packet_handler));
   ESP_ERROR_CHECK(esp_wifi_start());
   printf("Sniffer is running on channel %d\n", CONFIG_WIFI_CHANNEL);
 
