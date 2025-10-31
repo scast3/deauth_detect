@@ -14,15 +14,18 @@
 // Initialize global constant variables
 static const int DEAUTH_THRESH = 1000; // tune
 static const int TIME_WIND_MS = 10000; // tune
-static const int64_t TIME_WIND_US = (int64_t)TIME_WIND_MS * 1000LL;
+static const int64_t TIME_WIND_US =
+    (int64_t)TIME_WIND_MS * 1000LL; // esp_timer_get_time works in microseconds
+                                    // so this value is used for comparisons
 #define MAX_DEAUTH_BUFFER 1024
-#define ALERT_QUEUE_LEN 8
+#define ALERT_QUEUE_LEN                                                        \
+  8 // Tune this (ISR blocking/overflowing queue with packets)
 
 // Initialize global "volatile" vairables
 static volatile int total_deauths = 0;
 static int64_t deauth_times[MAX_DEAUTH_BUFFER];
-static int deauth_head = 0;
-static int deauth_tail = 0;
+static int deauth_head = 0; // Oldest timestamp
+static int deauth_tail = 0; // Newest timestamp
 uint8_t gateway_address[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // Initialize variables for ESP-NOW
@@ -36,7 +39,8 @@ typedef struct {
   int8_t attack_rssi;
 } deauth_alert_t;
 
-// Initialize nvs
+// Initialize nvs storage partition
+// Store configuration settings such as WiFi channel
 void init_nvs() {
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -48,15 +52,21 @@ void init_nvs() {
 }
 
 // ESP-NOW sending callback function
+// Automatically called by ESP-NOW after it attempts to send a packet
 void send_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
   printf("\r\nLast Packet Send Status:\t%s\n",
          status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
-// Helper function send data over ESP-NOW
+// Background task dedicated to sending alerts
+// FreeRTOS task/Core 1
 void espnow_sender_task(void *arg) {
   deauth_alert_t alert;
   while (1) {
+    // Attempt to take one item from alert_queue
+    // & alert is where the alert will be copied
+    // portMAX_DELAY tells FreeRTOS to block this task until an item is
+    // available
     if (xQueueReceive(alert_queue, &alert, portMAX_DELAY) == pdTRUE) {
       esp_err_t r =
           esp_now_send(gateway_address, (uint8_t *)&alert, sizeof(alert));
@@ -72,6 +82,8 @@ void espnow_sender_task(void *arg) {
 // Callback each time a packet is received
 // Core of sensor system
 // Promiscuous mode core
+// Sniffer callback
+// ISR/CORE 0
 void wifi_promiscuous_packet_handler(void *buf,
                                      wifi_promiscuous_pkt_type_t type) {
   if (type != WIFI_PKT_MGMT)
@@ -96,11 +108,15 @@ void wifi_promiscuous_packet_handler(void *buf,
   total_deauths++;
   int64_t now = esp_timer_get_time();
 
+  // Prune timestamps in deauth_times older than TIME_WIND
+  // %MAX_DEAUTH_BUFFER for wraparound
   while (deauth_head != deauth_tail &&
          deauth_times[deauth_head] < now - TIME_WIND_US) {
     deauth_head = (deauth_head + 1) % MAX_DEAUTH_BUFFER;
   }
 
+  // Check if buffer is full by incrementing tail by 1
+  // If so, increment deauth_head by 1 to make space
   if ((deauth_tail + 1) % MAX_DEAUTH_BUFFER == deauth_head) {
     deauth_head = (deauth_head + 1) % MAX_DEAUTH_BUFFER;
   }
@@ -108,16 +124,20 @@ void wifi_promiscuous_packet_handler(void *buf,
   deauth_times[deauth_tail] = now;
   deauth_tail = (deauth_tail + 1) % MAX_DEAUTH_BUFFER;
 
+  // Calculates total number of items in buffer
+  // (deauths in time window)
   int current_count = (deauth_tail >= deauth_head)
                           ? deauth_tail - deauth_head
                           : deauth_tail - deauth_head + MAX_DEAUTH_BUFFER;
 
+  // Attack detection logic
   if (current_count >= DEAUTH_THRESH) {
     deauth_alert_t alert;
     memcpy(alert.attack_mac, send_mac, sizeof(alert.attack_mac));
     alert.attack_rssi = ppkt->rx_ctrl.rssi;
     esp_wifi_get_mac(WIFI_IF_STA, alert.sensor_mac);
 
+    // Send alert to FreeRTOS queue
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if (xQueueSendFromISR(alert_queue, &alert, &xHigherPriorityTaskWoken) !=
         pdTRUE) {
