@@ -6,9 +6,11 @@
 #include "freertos/task.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
+#include <driver/uart.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 // Define alert struct to reflect sensor struct
 typedef struct {
@@ -16,6 +18,36 @@ typedef struct {
   uint8_t sensor_mac[6];
   int8_t attack_rssi;
 } deauth_alert_t;
+
+// UART STUFF
+static const int uart_buffer_size = (1024 * 2);
+static QueueHandle_t uart_queue = NULL;
+static const uart_port_t uart_num = UART_NUM_2;
+#define TXD_PIN 17
+#define RXD_PIN 16
+
+void init_uart() {
+  uart_config_t uart_config = {
+      .baud_rate = 115200,
+      .data_bits = UART_DATA_8_BITS,
+      .parity = UART_PARITY_DISABLE,
+      .stop_bits = UART_STOP_BITS_1,
+      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+      .rx_flow_ctrl_thresh = 122,
+  };
+
+  ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
+  ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size,
+                                      uart_buffer_size, 10, &uart_queue, 0));
+  ESP_ERROR_CHECK(uart_set_pin(uart_num, TXD_PIN, RXD_PIN, -1, -1));
+
+  // Write data to UART.
+  // char *test_str = "This is a test string.\n";
+  // while (1) {
+  // sleep(2);
+  // uart_write_bytes(uart_num, (const char *)test_str, strlen(test_str));
+  //}
+}
 
 // Init nvs
 void init_nvs() {
@@ -46,6 +78,8 @@ void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
          alert.sensor_mac[0], alert.sensor_mac[1], alert.sensor_mac[2],
          alert.sensor_mac[3], alert.sensor_mac[4], alert.sensor_mac[5]);
   printf("RSSI: %d dBm\n", alert.attack_rssi);
+
+  uart_write_bytes(uart_num, &alert, sizeof(alert));
 }
 
 // Inialize:
@@ -74,6 +108,7 @@ void init_gateway() {
 // Main function
 void app_main(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
+  init_uart();
   init_gateway();
   printf("Receiver is listening for ESP-NOW alerts...\n");
 
