@@ -12,13 +12,13 @@
 #include <string.h>
 
 // Initialize global constant variables
-static const int DEAUTH_THRESH = 1000; // tune
-static const int TIME_WIND_MS = 10000; // tune
+static const int DEAUTH_THRESH = 1000; // tune (set to 1 for gorilla)
+static const int TIME_WIND_MS = 10000; // tune (set to 5-10 for gorilla)
 static const int64_t TIME_WIND_US =
     (int64_t)TIME_WIND_MS * 1000LL; // esp_timer_get_time works in microseconds
                                     // so this value is used for comparisons
 #define MAX_DEAUTH_BUFFER 1024
-#define ALERT_QUEUE_LEN                                                        \
+#define EVENT_QUEUE_LEN                                                        \
   8 // Tune this (ISR blocking/overflowing queue with packets)
 
 // Initialize global "volatile" vairables
@@ -29,15 +29,15 @@ static int deauth_tail = 0; // Newest timestamp
 uint8_t gateway_address[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // Initialize variables for ESP-NOW
-static QueueHandle_t alert_queue = NULL;
+static QueueHandle_t event_queue = NULL;
 static esp_now_peer_info_t peer_info;
 
-// Define alert struct to be sent over ESP-NOW
+// Define event struct to be sent over ESP-NOW
 typedef struct {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
   int8_t attack_rssi;
-} deauth_alert_t;
+} wifi_deauth_event_t;
 
 // Initialize nvs storage partition
 // Store configuration settings such as WiFi channel
@@ -58,18 +58,18 @@ void send_cb(const uint8_t *mac_addr, esp_now_send_status_t status) {
          status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
-// Background task dedicated to sending alerts
+// Background task dedicated to sending events
 // FreeRTOS task/Core 1
 void espnow_sender_task(void *arg) {
-  deauth_alert_t alert;
+  wifi_deauth_event_t event;
   while (1) {
-    // Attempt to take one item from alert_queue
-    // & alert is where the alert will be copied
+    // Attempt to take one item from event_queue
+    // & event is where the event will be copied
     // portMAX_DELAY tells FreeRTOS to block this task until an item is
     // available
-    if (xQueueReceive(alert_queue, &alert, portMAX_DELAY) == pdTRUE) {
+    if (xQueueReceive(event_queue, &event, portMAX_DELAY) == pdTRUE) {
       esp_err_t r =
-          esp_now_send(gateway_address, (uint8_t *)&alert, sizeof(alert));
+          esp_now_send(gateway_address, (uint8_t *)&event, sizeof(event));
       if (r == ESP_OK) {
         printf("esp_now_send queued OK\n");
       } else {
@@ -132,16 +132,16 @@ void wifi_promiscuous_packet_handler(void *buf,
 
   // Attack detection logic
   if (current_count >= DEAUTH_THRESH) {
-    deauth_alert_t alert;
-    memcpy(alert.attack_mac, send_mac, sizeof(alert.attack_mac));
-    alert.attack_rssi = ppkt->rx_ctrl.rssi;
-    esp_wifi_get_mac(WIFI_IF_STA, alert.sensor_mac);
+    wifi_deauth_event_t event;
+    memcpy(event.attack_mac, send_mac, sizeof(event.attack_mac));
+    event.attack_rssi = ppkt->rx_ctrl.rssi;
+    esp_wifi_get_mac(WIFI_IF_STA, event.sensor_mac);
 
-    // Send alert to FreeRTOS queue
+    // Send event to FreeRTOS queue
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    if (xQueueSendFromISR(alert_queue, &alert, &xHigherPriorityTaskWoken) !=
+    if (xQueueSendFromISR(event_queue, &event, &xHigherPriorityTaskWoken) !=
         pdTRUE) {
-      printf("Alert queue full! Increase the size of ALERT_QUEUE_LEN!\n");
+      printf("event queue full! Increase the size of EVENT_QUEUE_LEN!\n");
     }
     if (xHigherPriorityTaskWoken)
       portYIELD_FROM_ISR();
@@ -196,9 +196,9 @@ void init_wifi_sniffer() {
 void app_main(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  alert_queue = xQueueCreate(ALERT_QUEUE_LEN, sizeof(deauth_alert_t));
-  if (alert_queue == NULL) {
-    printf("Failed to create alert queue\n");
+  event_queue = xQueueCreate(EVENT_QUEUE_LEN, sizeof(wifi_deauth_event_t));
+  if (event_queue == NULL) {
+    printf("Failed to create event queue\n");
     return;
   }
   xTaskCreate(espnow_sender_task, "espnow_sender", 4096, NULL, 5, NULL);

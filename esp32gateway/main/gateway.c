@@ -12,12 +12,12 @@
 #include <string.h>
 #include <unistd.h>
 
-// Define alert struct to reflect sensor struct
+// Define event struct to reflect sensor struct
 typedef struct {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
   int8_t attack_rssi;
-} deauth_alert_t;
+} wifi_deauth_event_t;
 
 // UART STUFF
 static const int uart_buffer_size = (1024 * 2);
@@ -63,23 +63,23 @@ void init_nvs() {
 // Receiver callback
 // Called whenever data is received from sensors
 void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
-  if (len != sizeof(deauth_alert_t)) {
+  if (len != sizeof(wifi_deauth_event_t)) {
     printf("Received invalid data length: %d\n", len);
     return;
   }
-  deauth_alert_t alert;
-  memcpy(&alert, data, sizeof(deauth_alert_t));
+  wifi_deauth_event_t event;
+  memcpy(&event, data, sizeof(wifi_deauth_event_t));
 
   printf("Deauth Attack Detected!\n");
-  printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", alert.attack_mac[0],
-         alert.attack_mac[1], alert.attack_mac[2], alert.attack_mac[3],
-         alert.attack_mac[4], alert.attack_mac[5]);
+  printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", event.attack_mac[0],
+         event.attack_mac[1], alert.attack_mac[2], alert.attack_mac[3],
+         event.attack_mac[4], alert.attack_mac[5]);
   printf("From Sensor MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-         alert.sensor_mac[0], alert.sensor_mac[1], alert.sensor_mac[2],
-         alert.sensor_mac[3], alert.sensor_mac[4], alert.sensor_mac[5]);
-  printf("RSSI: %d dBm\n", alert.attack_rssi);
+         event.sensor_mac[0], alert.sensor_mac[1], alert.sensor_mac[2],
+         event.sensor_mac[3], alert.sensor_mac[4], alert.sensor_mac[5]);
+  printf("RSSI: %d dBm\n", event.attack_rssi);
 
-  uart_write_bytes(uart_num, &alert, sizeof(alert));
+  uart_write_bytes(uart_num, &event, sizeof(alert));
 }
 
 // Inialize:
@@ -110,7 +110,7 @@ void app_main(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   init_uart();
   init_gateway();
-  printf("Receiver is listening for ESP-NOW alerts...\n");
+  printf("Receiver is listening for ESP-NOW deauth events...\n");
 
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(5000));
