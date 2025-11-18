@@ -28,7 +28,7 @@ static const uart_port_t uart_num = UART_NUM_2;
 
 void init_uart() {
   uart_config_t uart_config = {
-      .baud_rate = 115200,
+      .baud_rate = 921600,
       .data_bits = UART_DATA_8_BITS,
       .parity = UART_PARITY_DISABLE,
       .stop_bits = UART_STOP_BITS_1,
@@ -72,14 +72,14 @@ void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
 
   printf("Deauth Attack Detected!\n");
   printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", event.attack_mac[0],
-         event.attack_mac[1], alert.attack_mac[2], alert.attack_mac[3],
-         event.attack_mac[4], alert.attack_mac[5]);
+         event.attack_mac[1], event.attack_mac[2], event.attack_mac[3],
+         event.attack_mac[4], event.attack_mac[5]);
   printf("From Sensor MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-         event.sensor_mac[0], alert.sensor_mac[1], alert.sensor_mac[2],
-         event.sensor_mac[3], alert.sensor_mac[4], alert.sensor_mac[5]);
+         event.sensor_mac[0], event.sensor_mac[1], event.sensor_mac[2],
+         event.sensor_mac[3], event.sensor_mac[4], event.sensor_mac[5]);
   printf("RSSI: %d dBm\n", event.attack_rssi);
 
-  uart_write_bytes(uart_num, &event, sizeof(alert));
+  uart_write_bytes(uart_num, &event, sizeof(event));
 }
 
 // Inialize:

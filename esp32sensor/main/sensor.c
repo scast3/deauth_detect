@@ -12,8 +12,8 @@
 #include <string.h>
 
 // Initialize global constant variables
-static const int DEAUTH_THRESH = 1000; // tune (set to 1 for gorilla)
-static const int TIME_WIND_MS = 10000; // tune (set to 5-10 for gorilla)
+#define DEAUTH_THRESH 50             // tune (set to 1 for gorilla)
+static const int TIME_WIND_MS = 500; // tune (set to 5-10 for gorilla)
 static const int64_t TIME_WIND_US =
     (int64_t)TIME_WIND_MS * 1000LL; // esp_timer_get_time works in microseconds
                                     // so this value is used for comparisons
@@ -26,6 +26,7 @@ static volatile int total_deauths = 0;
 static int64_t deauth_times[MAX_DEAUTH_BUFFER];
 static int deauth_head = 0; // Oldest timestamp
 static int deauth_tail = 0; // Newest timestamp
+static int8_t rssi_values[DEAUTH_THRESH];
 uint8_t gateway_address[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // Initialize variables for ESP-NOW
@@ -105,7 +106,9 @@ void wifi_promiscuous_packet_handler(void *buf,
   uint8_t send_mac[6];
   memcpy(send_mac, &ppkt->payload[10], 6);
 
-  total_deauths++;
+  rssi_values[total_deauths % DEAUTH_THRESH] = ppkt->rx_ctrl.rssi;
+  total_deauths = (total_deauths + 1) % DEAUTH_THRESH;
+
   int64_t now = esp_timer_get_time();
 
   // Prune timestamps in deauth_times older than TIME_WIND
@@ -132,9 +135,15 @@ void wifi_promiscuous_packet_handler(void *buf,
 
   // Attack detection logic
   if (current_count >= DEAUTH_THRESH) {
+    int32_t rssi_sum = 0;
+    for (int i = 0; i < DEAUTH_THRESH; i++) {
+      rssi_sum += (int32_t)rssi_values[i];
+    }
+    float rssi_avg = (float)rssi_sum / DEAUTH_THRESH;
+
     wifi_deauth_event_t event;
     memcpy(event.attack_mac, send_mac, sizeof(event.attack_mac));
-    event.attack_rssi = ppkt->rx_ctrl.rssi;
+    event.attack_rssi = (int8_t)rssi_avg;
     esp_wifi_get_mac(WIFI_IF_STA, event.sensor_mac);
 
     // Send event to FreeRTOS queue
@@ -146,6 +155,8 @@ void wifi_promiscuous_packet_handler(void *buf,
     if (xHigherPriorityTaskWoken)
       portYIELD_FROM_ISR();
     deauth_head = deauth_tail = 0;
+    total_deauths = 0;
+    memset(rssi_values, 0, sizeof(rssi_values));
   }
 }
 
