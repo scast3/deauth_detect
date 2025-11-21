@@ -37,7 +37,9 @@ static esp_now_peer_info_t peer_info;
 typedef struct {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
-  int8_t attack_rssi;
+  int8_t rssi_mean;
+  float rssi_variance;
+  int frame_count;
 } wifi_deauth_event_t;
 
 // Initialize nvs storage partition
@@ -135,15 +137,26 @@ void wifi_promiscuous_packet_handler(void *buf,
 
   // Attack detection logic
   if (current_count >= DEAUTH_THRESH) {
+    // Calculate rssi_mean
     int32_t rssi_sum = 0;
     for (int i = 0; i < DEAUTH_THRESH; i++) {
       rssi_sum += (int32_t)rssi_values[i];
     }
     float rssi_avg = (float)rssi_sum / DEAUTH_THRESH;
 
+    // Calculate rssi variance
+    int64_t variance_sum = 0;
+    for (int i = 0; i < DEAUTH_THRESH; i++) {
+      int32_t difference = rssi_values[i] - rssi_avg;
+      variance_sum = variance_sum + (difference * difference);
+    }
+    float variance = (float)variance_sum / (DEAUTH_THRESH - 1);
+
     wifi_deauth_event_t event;
     memcpy(event.attack_mac, send_mac, sizeof(event.attack_mac));
-    event.attack_rssi = (int8_t)rssi_avg;
+    event.rssi_mean = (int8_t)rssi_avg;
+    event.rssi_variance = variance;
+    event.frame_count = current_count;
     esp_wifi_get_mac(WIFI_IF_STA, event.sensor_mac);
 
     // Send event to FreeRTOS queue
