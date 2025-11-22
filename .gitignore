@@ -4,3 +4,5 @@ sdkconfig
 sdkconfig.old
 .venv
 *.db
+*.swp
+*.o
