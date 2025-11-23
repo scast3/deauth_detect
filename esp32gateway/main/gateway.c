@@ -19,6 +19,7 @@ typedef struct {
   int8_t rssi_mean;
   float rssi_variance;
   int frame_count;
+  uint64_t timestamp;
 } wifi_deauth_event_t;
 
 // UART STUFF

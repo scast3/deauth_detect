@@ -12,8 +12,8 @@
 #include <string.h>
 
 // Initialize global constant variables
-#define DEAUTH_THRESH 50             // tune (set to 1 for gorilla)
-static const int TIME_WIND_MS = 500; // tune (set to 5-10 for gorilla)
+#define DEAUTH_THRESH 30             // tune (set to 1 for gorilla)
+static const int TIME_WIND_MS = 400; // tune (set to 5-10 for gorilla)
 static const int64_t TIME_WIND_US =
     (int64_t)TIME_WIND_MS * 1000LL; // esp_timer_get_time works in microseconds
                                     // so this value is used for comparisons
@@ -40,6 +40,7 @@ typedef struct {
   int8_t rssi_mean;
   float rssi_variance;
   int frame_count;
+  uint64_t timestamp;
 } wifi_deauth_event_t;
 
 // Initialize nvs storage partition
@@ -157,6 +158,7 @@ void wifi_promiscuous_packet_handler(void *buf,
     event.rssi_mean = (int8_t)rssi_avg;
     event.rssi_variance = variance;
     event.frame_count = current_count;
+    event.timestamp = 0;
     esp_wifi_get_mac(WIFI_IF_STA, event.sensor_mac);
 
     // Send event to FreeRTOS queue
