@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 // Define event struct to reflect sensor struct
+
 typedef struct {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
