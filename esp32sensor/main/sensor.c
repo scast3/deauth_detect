@@ -42,6 +42,7 @@ typedef struct {
   int frame_count;
   uint64_t timestamp;
 } wifi_deauth_event_t;
+
 // Initialize nvs storage partition
 // Store configuration settings such as WiFi channel
 void init_nvs() {
