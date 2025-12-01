@@ -2,3 +2,7 @@ build
 .cache
 sdkconfig
 sdkconfig.old
+.venv
+*.db
+*.swp
+*.o
