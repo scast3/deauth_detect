@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 // Define event struct to reflect sensor struct
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
   int8_t rssi_mean;
@@ -21,9 +21,8 @@ typedef struct {
   int frame_count;
   uint64_t timestamp;
 } wifi_deauth_event_t;
-
 // UART STUFF
-static const int uart_buffer_size = (1024 * 2);
+static const int uart_buffer_size = (1024 * 64);
 static QueueHandle_t uart_queue = NULL;
 static const uart_port_t uart_num = UART_NUM_2;
 #define TXD_PIN 17
@@ -73,7 +72,7 @@ void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
   wifi_deauth_event_t event;
   memcpy(&event, data, sizeof(wifi_deauth_event_t));
 
-  printf("Deauth Attack Detected!\n");
+  printf("Deauth event received on gateway.\n");
   printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", event.attack_mac[0],
          event.attack_mac[1], event.attack_mac[2], event.attack_mac[3],
          event.attack_mac[4], event.attack_mac[5]);
