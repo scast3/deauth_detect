@@ -18,7 +18,7 @@
 
 using namespace std;
 
-struct wifi_deauth_event_t {
+struct __attribute__((packed)) wifi_deauth_event_t {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
   int8_t rssi_mean;
@@ -31,13 +31,13 @@ bool operator>(const wifi_deauth_event_t &a, const wifi_deauth_event_t &b) {
   return a.timestamp > b.timestamp;
 }
 // Multithreading variables
-static queue<wifi_deauth_event_t> event_queue;
+static queue<wifi_deauth_event_t> event_queue; // Shared
 static mutex event_queue_mutex;
 static condition_variable event_queue_cv;
 
 // Time quantum for in-flight re-ordering
 // Tune
-static const int64_t quantum = 2000000;
+static const int64_t quantum = 2000000; // 2s
 
 // Signal handling stuff for graceful shutdown
 // Allows Ctrl+C graceful shutdown
@@ -101,7 +101,6 @@ void read_events(int fd) {
 // in-flight re-ordering
 void insert_events(duckdb::Appender *appender) {
   cerr << "[THREAD] insert_events started" << endl;
-
   map<uint64_t, vector<wifi_deauth_event_t>> qbuckets;
   uint64_t current_qbucket = 0;
   int rows = 0;
@@ -133,23 +132,18 @@ void insert_events(duckdb::Appender *appender) {
     }
 
     // If incoming timestamp exceeds (current index + quantum)
-    // Create new index as the incoming timestamp
     if ((event.timestamp - current_qbucket) > quantum) {
       cerr << "[insert_events] Closing qbucket " << current_qbucket << " with "
            << qbuckets[current_qbucket].size() << " events" << endl;
 
-      qbuckets[event.timestamp].push_back(event);
-
-      // Sort completed bucket
+      // Sort completed bucket (the OLD bucket)
       sort(qbuckets[current_qbucket].begin(), qbuckets[current_qbucket].end(),
            [](const wifi_deauth_event_t &a, const wifi_deauth_event_t &b) {
              return !(a > b);
            });
 
       // Append sorted bucket to DB
-      for (int i = 0; i < qbuckets[current_qbucket].size(); i++) {
-        wifi_deauth_event_t current_event = qbuckets[current_qbucket].at(i);
-
+      for (const auto &current_event : qbuckets[current_qbucket]) {
         cerr << "[insert_events] Appending event ts=" << current_event.timestamp
              << " attack=" << bytes_to_mac(current_event.attack_mac)
              << " sensor=" << bytes_to_mac(current_event.sensor_mac)
@@ -167,14 +161,16 @@ void insert_events(duckdb::Appender *appender) {
       cerr << "[insert_events] Flushing appender..." << endl;
       appender->Flush();
 
+      // Clean up old bucket and move to new one
       qbuckets.erase(current_qbucket);
-      current_qbucket = event.timestamp;
+      current_qbucket = event.timestamp; // ← Now update to new bucket
       cerr << "[insert_events] New qbucket=" << current_qbucket << endl;
-    } else { // Add incoming event to current bucket
-      qbuckets[current_qbucket].push_back(event);
-      cerr << "[insert_events] Added event to current bucket ("
-           << qbuckets[current_qbucket].size() << " total)" << endl;
     }
+
+    // Add incoming event to CURRENT bucket (whether new or existing)
+    qbuckets[current_qbucket].push_back(event);
+    cerr << "[insert_events] Added event to current bucket ("
+         << qbuckets[current_qbucket].size() << " total)" << endl;
 
     rows++;
   }
@@ -202,7 +198,7 @@ int main() {
   cerr << "[main] Serial port configured" << endl;
 
   // Configure DuckDB
-  duckdb::DuckDB db(nullptr);
+  duckdb::DuckDB db("events.db");
   duckdb::Connection con(db);
   con.Query("CREATE TABLE IF NOT EXISTS events (timestamp BIGINT, attack_mac "
             "VARCHAR(17), sensor_mac VARCHAR(17), rssi_mean INT, rssi_variance "

@@ -34,7 +34,7 @@ static QueueHandle_t event_queue = NULL;
 static esp_now_peer_info_t peer_info;
 
 // Define event struct to be sent over ESP-NOW
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
   int8_t rssi_mean;
@@ -159,6 +159,15 @@ void wifi_promiscuous_packet_handler(void *buf,
     event.frame_count = current_count;
     event.timestamp = 0;
     esp_wifi_get_mac(WIFI_IF_STA, event.sensor_mac);
+
+    printf("Deauth event detected on sensor.\n");
+    printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", event.attack_mac[0],
+           event.attack_mac[1], event.attack_mac[2], event.attack_mac[3],
+           event.attack_mac[4], event.attack_mac[5]);
+    printf("From Sensor MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+           event.sensor_mac[0], event.sensor_mac[1], event.sensor_mac[2],
+           event.sensor_mac[3], event.sensor_mac[4], event.sensor_mac[5]);
+    printf("RSSI: %d dBm\n", event.rssi_mean);
 
     // Send event to FreeRTOS queue
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
