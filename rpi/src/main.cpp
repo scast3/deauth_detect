@@ -77,8 +77,8 @@ void read_events(int fd) {
     // event.timestamp = now_us();
 
     cerr << "[read_events] Event received: attack="
-         << bytes_to_mac(event.attack_mac).c_str()
-         << " sensor=" << bytes_to_mac(event.sensor_mac).c_str()
+         << bytes_to_mac(event.attack_mac)
+         << " sensor=" << bytes_to_mac(event.sensor_mac)
          << " rssi_mean=" << (int)event.rssi_mean
          << " frame_count=" << event.frame_count << " ts=" << event.timestamp
          << endl;
