@@ -157,7 +157,7 @@ void wifi_promiscuous_packet_handler(void *buf,
     event.rssi_mean = (int8_t)rssi_avg;
     event.rssi_variance = variance;
     event.frame_count = current_count;
-    event.timestamp = 0;
+    event.timestamp = (int64_t)esp_timer_get_time();
     esp_wifi_get_mac(WIFI_IF_STA, event.sensor_mac);
 
     printf("Deauth event detected on sensor.\n");

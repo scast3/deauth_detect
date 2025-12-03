@@ -24,7 +24,7 @@ struct __attribute__((packed)) wifi_deauth_event_t {
   int8_t rssi_mean;
   float rssi_variance;
   int frame_count;
-  uint64_t timestamp = 0;
+  uint64_t timestamp;
 };
 
 bool operator>(const wifi_deauth_event_t &a, const wifi_deauth_event_t &b) {
@@ -74,7 +74,7 @@ void read_events(int fd) {
       continue;
     }
 
-    event.timestamp = now_us();
+    // event.timestamp = now_us();
 
     cerr << "[read_events] Event received: attack="
          << bytes_to_mac(event.attack_mac).c_str()

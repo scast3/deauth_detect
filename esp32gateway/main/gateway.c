@@ -1,6 +1,7 @@
 #include "esp_err.h"
 #include "esp_event.h"
 #include "esp_now.h"
+#include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -71,6 +72,8 @@ void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
   }
   wifi_deauth_event_t event;
   memcpy(&event, data, sizeof(wifi_deauth_event_t));
+
+  // event.timestamp = (int64_t)esp_timer_get_time();
 
   printf("Deauth event received on gateway.\n");
   printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", event.attack_mac[0],
