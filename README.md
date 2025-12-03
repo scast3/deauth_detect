@@ -8,7 +8,7 @@ cd deauth_detect
 - Run Raspberry Pi setup script to install DuckDB and necessary libraries.
 ```shell
 sudo chmod +x pi_setup.sh
-./pi_setup.sh
+sudo ./pi_setup.sh
 ```
 - Build the C++ program on your Raspberry Pi
 ```shell
