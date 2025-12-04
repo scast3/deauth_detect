@@ -250,6 +250,7 @@ int main() {
     // con.Query("SELECT .....");
 
     // most recent timestemp
+    // could just choose top index, if that makes it any faster, n
     auto latest_ts_result = con.Query("SELECT MAX(timestamp) FROM events;");
     if (!latest_ts_result->success || latest_ts_result->IsNull(0,0)) {
         this_thread::sleep_for(chrono::milliseconds(200));
@@ -262,7 +263,15 @@ int main() {
     uint64_t ts_max = center_ts + window_us;
 
     // add main query here
+    string query = "SELECT sensor_mac, rssi_mean, rssi_variance FROM events WHERE timestamp >= " + to_string(ts_min) +
+    " AND timestamp <= " + to_string(ts_max) + ";"; // choosing the raw rssi values from each sensor within the timestamp in the window
 
+    auto result = con.Query(query); //check if fails
+    if (!result->success) {
+        cerr << "[main] Query failed: " << result->error << endl;
+        this_thread::sleep_for(chrono::milliseconds(200));
+        continue;
+    }
 
 
 
