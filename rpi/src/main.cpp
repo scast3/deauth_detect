@@ -20,6 +20,10 @@
 
 using namespace std;
 
+double x1 = 0,   y1 = 0;
+double x2 = 3.0, y2 = 0;
+double x3 = 1.5, y3 = 2.5; // sample reciever locations. Will probably need to update
+
 // we might need to change from raw rssi to some regression funciton to get distance, let's test this out
 // x and y values should be fixed, only thing changing is r
 std::tuple<double, double> trilaterate(double x1, double y1, double r1, double x2, double y2, double r2, double x3, double y3, double r3){
@@ -38,7 +42,7 @@ std::tuple<double, double> trilaterate(double x1, double y1, double r1, double x
     double y = (A*F - C*D) / denominator;
     return {x, y};
 }
-
+// i am realizing we may beed a custom rssi to distance function calibrated for each reciever
 double rssi_to_distance(int rssi) {
     // Example quadratic model: d = a*rssi^2 + b*rssi + c
     // double a = -0.0025;
@@ -263,8 +267,15 @@ int main() {
     uint64_t ts_max = center_ts + window_us;
 
     // add main query here
-    string query = "SELECT sensor_mac, rssi_mean, rssi_variance FROM events WHERE timestamp >= " + to_string(ts_min) +
-    " AND timestamp <= " + to_string(ts_max) + ";"; // choosing the raw rssi values from each sensor within the timestamp in the window
+    string query =
+    "SELECT sensor_mac, "
+    "       AVG(rssi_mean) AS avg_rssi, "
+    "       AVG(rssi_variance) AS avg_variance, "
+    "       COUNT(*) AS frame_count "
+    "FROM events "
+    "WHERE timestamp >= " + to_string(ts_min) +
+    " AND timestamp <= " + to_string(ts_max) +
+    "GROUP BY sensor_mac;"; // choosing the raw rssi values from each sensor within the timestamp in the window
 
     auto result = con.Query(query); //check if fails
     if (!result->success) {
@@ -272,6 +283,18 @@ int main() {
         this_thread::sleep_for(chrono::milliseconds(200));
         continue;
     }
+
+    // row count of this result should ideally be 3, if not, then we prob need to expand window to hit all 3 sensors
+
+
+    struct SensorReading { // calculating the averages on the window
+        string sensor_mac;
+        float avg_rssi;
+        float avg_variance;
+        int frame_count; //maybe rename
+    };
+    vector<SensorReading> readings;
+    readings.reserve(result->row_count());
 
 
 
