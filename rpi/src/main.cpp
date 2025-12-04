@@ -23,6 +23,11 @@ using namespace std;
 double x1 = 0,   y1 = 0;
 double x2 = 3.0, y2 = 0;
 double x3 = 1.5, y3 = 2.5; // sample reciever locations. Will probably need to update
+map<string, pair<double,double>> sensor_positions = {
+    {"AA:BB:CC:01:01:01", {x1, y1}},   // put actual mac addresses ine here
+    {"AA:BB:CC:02:02:02", {x2, y2}},
+    {"AA:BB:CC:03:03:03", {x3, y3}}
+};
 
 // we might need to change from raw rssi to some regression funciton to get distance, let's test this out
 // x and y values should be fixed, only thing changing is r
@@ -315,8 +320,25 @@ int main() {
             << "  frames=" << r.frame_count
             << "\n";
     }//debug prints
-    
+
     //distance and triangulation math!!!
+    vector<double> distances;
+    vector<pair<double,double>> coords; // to store triang resulkts
+
+    for (auto &r : readings) { // iterate through the 3 sensors
+        if (sensor_positions.find(r.sensor_mac) == sensor_positions.end()) { //no corresponding mac
+            cerr << "[WARN] Unknown sensor MAC: " << r.sensor_mac << "\n";
+            continue;
+        }
+
+        auto [sx, sy] = sensor_positions[r.sensor_mac];
+
+        // convert rssi to distance
+        double dist = rssi_to_distance(r.avg_rssi);
+
+        distances.push_back(dist);
+        coords.push_back({sx, sy});
+    }
 
 
     this_thread::sleep_for(chrono::milliseconds(200));
