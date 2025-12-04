@@ -339,7 +339,27 @@ int main() {
         distances.push_back(dist);
         coords.push_back({sx, sy});
     }
+    if (distances.size() == 3) { // need to check theres enough sensors to trilaterate
+        double r1 = distances[0];
+        double r2 = distances[1];
+        double r3 = distances[2];
 
+        double sx1 = coords[0].first, sy1 = coords[0].second;
+        double sx2 = coords[1].first, sy2 = coords[1].second;
+        double sx3 = coords[2].first, sy3 = coords[2].second;
+
+        auto [x, y] = trilaterate(sx1, sy1, r1, sx2, sy2, r2, sx3, sy3, r3 );
+
+        if (std::isnan(x) || std::isnan(y)) {
+            cout << "[TRILATERATION] Failed — geometry degenerate\n";
+        } else {
+            cout << "[TRILATERATION] Position estimate: ("
+                << x << ", " << y << ")\n";
+        }
+    } else {
+        cout << "[TRILATERATION] Not enough sensors: "
+            << distances.size() << " available\n";
+    }
 
     this_thread::sleep_for(chrono::milliseconds(200));
   }
