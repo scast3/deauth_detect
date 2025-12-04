@@ -296,6 +296,27 @@ int main() {
     vector<SensorReading> readings;
     readings.reserve(result->row_count());
 
+    // iterate through the 3 sensors and populate the readings vec
+    for (size_t i = 0; i < result->row_count(); i++) {
+      SensorReading sr;
+      sr.sensor_mac   = result->GetValue<string>(0, i);
+      sr.avg_rssi     = result->GetValue<double>(1, i);
+      sr.avg_variance = result->GetValue<double>(2, i);
+      sr.frame_count  = result->GetValue<int32_t>(3, i);
+      readings.push_back(sr);
+    }
+    cout << "\nWindow " << ts_min << " to " << ts_max << " → "
+        << readings.size() << " sensors\n";
+
+    for (auto &r : readings) {
+        cout << "  Sensor: " << r.sensor_mac
+            << "  avg_rssi=" << r.avg_rssi
+            << "  var=" << r.avg_variance
+            << "  frames=" << r.frame_count
+            << "\n";
+    }//debug prints
+    
+    //distance and triangulation math!!!
 
 
     this_thread::sleep_for(chrono::milliseconds(200));
