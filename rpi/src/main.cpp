@@ -15,8 +15,38 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <tuple>
+#include <cmath>
 
 using namespace std;
+
+// we might need to change from raw rssi to some regression funciton to get distance, let's test this out
+// x and y values should be fixed, only thing changing is r
+std::tuple<double, double> trilaterate(double x1, double y1, double r1, double x2, double y2, double r2, double x3, double y3, double r3){
+    double A = 2*(x2 - x1);
+    double B = 2*(y2 - y1);
+    double C = r1*r1 - r2*r2 - x1*x1 + x2*x2 - y1*y1 + y2*y2;
+
+    double D = 2*(x3 - x1);
+    double E = 2*(y3 - y1);
+    double F = r1*r1 - r3*r3 - x1*x1 + x3*x3 - y1*y1 + y3*y3;
+
+    double denominator = A*E - B*D;
+    if (fabs(denominator) < 1e-9) return {NAN, NAN};
+
+    double x = (C*E - B*F) / denominator;
+    double y = (A*F - C*D) / denominator;
+    return {x, y};
+}
+
+double rssi_to_distance(int rssi) {
+    // Example quadratic model: d = a*rssi^2 + b*rssi + c
+    // double a = -0.0025;
+    // double b = 0.35;
+    // double c = -5.0;
+    return rssi;
+    // regression, will need to look at my notes from senior design
+}
 
 struct __attribute__((packed)) wifi_deauth_event_t {
   uint8_t attack_mac[6];
