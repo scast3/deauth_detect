@@ -248,6 +248,24 @@ int main() {
   while (keep_running) {
     // SQL QUERIES FOR ANALYSIS HERE!
     // con.Query("SELECT .....");
+
+    // most recent timestemp
+    auto latest_ts_result = con.Query("SELECT MAX(timestamp) FROM events;");
+    if (!latest_ts_result->success || latest_ts_result->IsNull(0,0)) {
+        this_thread::sleep_for(chrono::milliseconds(200));
+        continue;
+    }
+
+    uint64_t center_ts = latest_ts_result->GetValue<uint64_t>(0,0);
+    uint64_t window_us = 2000;   // for a 2ms window
+    uint64_t ts_min = center_ts - window_us;
+    uint64_t ts_max = center_ts + window_us;
+
+    // add main query here
+
+
+
+
     this_thread::sleep_for(chrono::milliseconds(200));
   }
 
