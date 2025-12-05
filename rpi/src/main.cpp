@@ -268,7 +268,7 @@ int main() {
     // could just choose top index, if that makes it any faster, n
     auto latest_ts_result = con.Query("SELECT MAX(timestamp) FROM events;");
     if (latest_ts_result->HasError() ||
-        latest_ts_result->GetValue(0, 0) == NULL) {
+        latest_ts_result->GetValue(0, 0) == nullptr) {
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
