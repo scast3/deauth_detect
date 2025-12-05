@@ -289,14 +289,14 @@ int main() {
         to_string(ts_min) + " AND timestamp <= " + to_string(ts_max) +
         " GROUP BY sensor_mac;"; // choosing the raw rssi values from each
                                  // sensor within the timestamp in the window
-    
+
     auto result = con.Query(query); // check if fails
     if (result->HasError()) {
       cerr << "[main] Query failed: " << result->GetError() << endl;
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
-    cout << "  [debug] result struct: " << result << "\n";
+    cout << "  [debug] result struct: " << result->ToString() << "\n";
 
     // row count of this result should ideally be 3, if not, then we prob need
     // to expand window to hit all 3 sensors
