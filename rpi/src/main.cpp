@@ -295,7 +295,7 @@ string query =
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
-    cout << "  [debug] result struct: " << result << "\n";
+    //cout << "  [debug] result struct: " << result.ToString() << "\n";
 
     // row count of this result should ideally be 3, if not, then we prob need
     // to expand window to hit all 3 sensors
