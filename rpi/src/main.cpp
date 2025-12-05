@@ -311,10 +311,10 @@ int main() {
     // iterate through the 3 sensors and populate the readings vec
     for (size_t i = 0; i < result->RowCount(); i++) {
       SensorReading sr;
-      sr.sensor_mac = result->GetValue<char *>(0, i);
-      sr.avg_rssi = result->GetValue<double>(1, i);
-      sr.avg_variance = result->GetValue<double>(2, i);
-      sr.frame_count = result->GetValue<int32_t>(3, i);
+      sr.sensor_mac = result->GetValue<char *>(2, i);
+      sr.avg_rssi = result->GetValue<double>(3, i);
+      sr.avg_variance = result->GetValue<double>(4, i);
+      sr.frame_count = result->GetValue<int32_t>(5, i);
       readings.push_back(sr);
     }
     cout << "\nWindow " << ts_min << " to " << ts_max << " → "
