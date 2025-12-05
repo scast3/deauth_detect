@@ -37,7 +37,7 @@ sudo chmod a+rw [PORT]
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/linux-macos-setup.html
 - Add idf.py to PATH
 ```shell
-source /opt/esp-idf/export.fish
+source /opt/esp-idf/export
 ```
 - Set the idf.py device as the ESP32
 ```shell
@@ -82,7 +82,7 @@ sudo chmod a+rw [PORT]
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/linux-macos-setup.html
 - Add idf.py to PATH
 ```shell
-source /opt/esp-idf/export.fish
+source /opt/esp-idf/export
 ```
 - Set the idf.py device as the ESP32
 ```shell
