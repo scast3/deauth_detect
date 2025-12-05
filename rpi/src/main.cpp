@@ -21,14 +21,14 @@
 
 using namespace std;
 
-double x1 = 0, y1 = 0;
-double x2 = 3.0, y2 = 0;
-double x3 = 1.5,
-       y3 = 2.5; // sample reciever locations. Will probably need to update
+static double sensor_x1 = 0, sensor_y1 = 0;
+static double sensor_x2 = 3.0, sensor_y2 = 0;
+static double sensor_x3 = 1.5, sensor_y3 = 2.5;
 map<string, pair<double, double>> sensor_positions = {
-    {"AA:BB:CC:01:01:01", {x1, y1}}, // put actual mac addresses ine here
-    {"AA:BB:CC:02:02:02", {x2, y2}},
-    {"AA:BB:CC:03:03:03", {x3, y3}}};
+    {"AA:BB:CC:01:01:01",
+     {sensor_x1, sensor_y1}}, // put actual mac addresses ine here
+    {"AA:BB:CC:02:02:02", {sensor_x2, sensor_y2}},
+    {"AA:BB:CC:03:03:03", {sensor_x3, sensor_y3}}};
 
 // we might need to change from raw rssi to some regression funciton to get
 // distance, let's test this out x and y values should be fixed, only thing
