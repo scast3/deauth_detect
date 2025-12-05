@@ -309,14 +309,17 @@ int main() {
     readings.reserve(result->RowCount());
 
     // iterate through the 3 sensors and populate the readings vec
-    for (size_t i = 0; i < result->RowCount(); i++) {
+    for (size_t i = 0; i < result->RowCount(); ++i) {
       SensorReading sr;
-      sr.sensor_mac = result->GetValue<char *>(2, i);
-      sr.avg_rssi = result->GetValue<double>(3, i);
-      sr.avg_variance = result->GetValue<double>(4, i);
-      sr.frame_count = result->GetValue<int32_t>(5, i);
-      readings.push_back(sr);
+      // column order from the SQL:
+      // 0 = sensor_mac, 1 = avg_rssi, 2 = avg_variance, 3 = frame_count
+      sr.sensor_mac = result->GetValue<string>(0, i);
+      sr.avg_rssi = static_cast<float>(result->GetValue<double>(1, i));
+      sr.avg_variance = static_cast<float>(result->GetValue<double>(2, i));
+      sr.frame_count = result->GetValue<int32_t>(3, i);
+      readings.push_back(std::move(sr));
     }
+
     cout << "\nWindow " << ts_min << " to " << ts_max << " → "
          << readings.size() << " sensors\n";
 
