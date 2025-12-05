@@ -1,8 +1,10 @@
 #include "../include/esp32_to_uart.h"
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <csignal>
+#include <cstddef>
 #include <cstdint>
 #include <duckdb.hpp>
 #include <fcntl.h>
@@ -13,48 +15,52 @@
 #include <string>
 #include <termios.h>
 #include <thread>
+#include <tuple>
 #include <unistd.h>
 #include <vector>
-#include <tuple>
-#include <cmath>
 
 using namespace std;
 
-double x1 = 0,   y1 = 0;
+double x1 = 0, y1 = 0;
 double x2 = 3.0, y2 = 0;
-double x3 = 1.5, y3 = 2.5; // sample reciever locations. Will probably need to update
-map<string, pair<double,double>> sensor_positions = {
-    {"AA:BB:CC:01:01:01", {x1, y1}},   // put actual mac addresses ine here
+double x3 = 1.5,
+       y3 = 2.5; // sample reciever locations. Will probably need to update
+map<string, pair<double, double>> sensor_positions = {
+    {"AA:BB:CC:01:01:01", {x1, y1}}, // put actual mac addresses ine here
     {"AA:BB:CC:02:02:02", {x2, y2}},
-    {"AA:BB:CC:03:03:03", {x3, y3}}
-};
+    {"AA:BB:CC:03:03:03", {x3, y3}}};
 
-// we might need to change from raw rssi to some regression funciton to get distance, let's test this out
-// x and y values should be fixed, only thing changing is r
-std::tuple<double, double> trilaterate(double x1, double y1, double r1, double x2, double y2, double r2, double x3, double y3, double r3){
-    double A = 2*(x2 - x1);
-    double B = 2*(y2 - y1);
-    double C = r1*r1 - r2*r2 - x1*x1 + x2*x2 - y1*y1 + y2*y2;
+// we might need to change from raw rssi to some regression funciton to get
+// distance, let's test this out x and y values should be fixed, only thing
+// changing is r
+std::tuple<double, double> trilaterate(double x1, double y1, double r1,
+                                       double x2, double y2, double r2,
+                                       double x3, double y3, double r3) {
+  double A = 2 * (x2 - x1);
+  double B = 2 * (y2 - y1);
+  double C = r1 * r1 - r2 * r2 - x1 * x1 + x2 * x2 - y1 * y1 + y2 * y2;
 
-    double D = 2*(x3 - x1);
-    double E = 2*(y3 - y1);
-    double F = r1*r1 - r3*r3 - x1*x1 + x3*x3 - y1*y1 + y3*y3;
+  double D = 2 * (x3 - x1);
+  double E = 2 * (y3 - y1);
+  double F = r1 * r1 - r3 * r3 - x1 * x1 + x3 * x3 - y1 * y1 + y3 * y3;
 
-    double denominator = A*E - B*D;
-    if (fabs(denominator) < 1e-9) return {NAN, NAN};
+  double denominator = A * E - B * D;
+  if (fabs(denominator) < 1e-9)
+    return {NAN, NAN};
 
-    double x = (C*E - B*F) / denominator;
-    double y = (A*F - C*D) / denominator;
-    return {x, y};
+  double x = (C * E - B * F) / denominator;
+  double y = (A * F - C * D) / denominator;
+  return {x, y};
 }
-// i am realizing we may beed a custom rssi to distance function calibrated for each reciever
+// i am realizing we may beed a custom rssi to distance function calibrated for
+// each reciever
 double rssi_to_distance(int rssi) {
-    // Example quadratic model: d = a*rssi^2 + b*rssi + c
-    // double a = -0.0025;
-    // double b = 0.35;
-    // double c = -5.0;
-    return rssi;
-    // regression, will need to look at my notes from senior design
+  // Example quadratic model: d = a*rssi^2 + b*rssi + c
+  // double a = -0.0025;
+  // double b = 0.35;
+  // double c = -5.0;
+  return rssi;
+  // regression, will need to look at my notes from senior design
 }
 
 struct __attribute__((packed)) wifi_deauth_event_t {
@@ -261,104 +267,105 @@ int main() {
     // most recent timestemp
     // could just choose top index, if that makes it any faster, n
     auto latest_ts_result = con.Query("SELECT MAX(timestamp) FROM events;");
-    if (!latest_ts_result->success || latest_ts_result->IsNull(0,0)) {
-        this_thread::sleep_for(chrono::milliseconds(200));
-        continue;
+    if (latest_ts_result->HasError() ||
+        latest_ts_result->GetValue(0, 0) == NULL) {
+      this_thread::sleep_for(chrono::milliseconds(200));
+      continue;
     }
 
-    uint64_t center_ts = latest_ts_result->GetValue<uint64_t>(0,0);
-    uint64_t window_us = 2000;   // for a 2ms window
-    uint64_t ts_min = center_ts - window_us;
-    uint64_t ts_max = center_ts + window_us;
+    uint64_t ts_max = latest_ts_result->GetValue<uint64_t>(0, 0);
+    uint64_t window_us = 2000; // for a 2ms window
+    uint64_t ts_min = ts_max - window_us;
 
     // add main query here
     string query =
-    "SELECT sensor_mac, "
-    "       AVG(rssi_mean) AS avg_rssi, "
-    "       AVG(rssi_variance) AS avg_variance, "
-    "       COUNT(*) AS frame_count "
-    "FROM events "
-    "WHERE timestamp >= " + to_string(ts_min) +
-    " AND timestamp <= " + to_string(ts_max) +
-    "GROUP BY sensor_mac;"; // choosing the raw rssi values from each sensor within the timestamp in the window
+        "SELECT sensor_mac, "
+        "       AVG(rssi_mean) AS avg_rssi, "
+        "       AVG(rssi_variance) AS avg_variance, "
+        "       COUNT(*) AS frame_count "
+        "FROM events "
+        "WHERE timestamp >= " +
+        to_string(ts_min) + " AND timestamp <= " + to_string(ts_max) +
+        "GROUP BY sensor_mac;"; // choosing the raw rssi values from each sensor
+                                // within the timestamp in the window
 
-    auto result = con.Query(query); //check if fails
-    if (!result->success) {
-        cerr << "[main] Query failed: " << result->error << endl;
-        this_thread::sleep_for(chrono::milliseconds(200));
-        continue;
+    auto result = con.Query(query); // check if fails
+    if (result->HasError()) {
+      cerr << "[main] Query failed: " << result->GetError() << endl;
+      this_thread::sleep_for(chrono::milliseconds(200));
+      continue;
     }
 
-    // row count of this result should ideally be 3, if not, then we prob need to expand window to hit all 3 sensors
-
+    // row count of this result should ideally be 3, if not, then we prob need
+    // to expand window to hit all 3 sensors
 
     struct SensorReading { // calculating the averages on the window
-        string sensor_mac;
-        float avg_rssi;
-        float avg_variance;
-        int frame_count; //maybe rename
+      string sensor_mac;
+      float avg_rssi;
+      float avg_variance;
+      int frame_count; // maybe rename
     };
     vector<SensorReading> readings;
-    readings.reserve(result->row_count());
+    readings.reserve(result->RowCount());
 
     // iterate through the 3 sensors and populate the readings vec
-    for (size_t i = 0; i < result->row_count(); i++) {
+    for (size_t i = 0; i < result->RowCount(); i++) {
       SensorReading sr;
-      sr.sensor_mac   = result->GetValue<string>(0, i);
-      sr.avg_rssi     = result->GetValue<double>(1, i);
+      sr.sensor_mac = result->GetValue<string>(0, i);
+      sr.avg_rssi = result->GetValue<double>(1, i);
       sr.avg_variance = result->GetValue<double>(2, i);
-      sr.frame_count  = result->GetValue<int32_t>(3, i);
+      sr.frame_count = result->GetValue<int32_t>(3, i);
       readings.push_back(sr);
     }
     cout << "\nWindow " << ts_min << " to " << ts_max << " → "
-        << readings.size() << " sensors\n";
+         << readings.size() << " sensors\n";
 
     for (auto &r : readings) {
-        cout << "  Sensor: " << r.sensor_mac
-            << "  avg_rssi=" << r.avg_rssi
-            << "  var=" << r.avg_variance
-            << "  frames=" << r.frame_count
-            << "\n";
-    }//debug prints
+      cout << "  Sensor: " << r.sensor_mac << "  avg_rssi=" << r.avg_rssi
+           << "  var=" << r.avg_variance << "  frames=" << r.frame_count
+           << "\n";
+    } // debug prints
 
-    //distance and triangulation math!!!
+    // distance and triangulation math!!!
     vector<double> distances;
-    vector<pair<double,double>> coords; // to store triang resulkts
+    vector<pair<double, double>> coords; // to store triang resulkts
 
     for (auto &r : readings) { // iterate through the 3 sensors
-        if (sensor_positions.find(r.sensor_mac) == sensor_positions.end()) { //no corresponding mac
-            cerr << "[WARN] Unknown sensor MAC: " << r.sensor_mac << "\n";
-            continue;
-        }
+      if (sensor_positions.find(r.sensor_mac) ==
+          sensor_positions.end()) { // no corresponding mac
+        cerr << "[WARN] Unknown sensor MAC: " << r.sensor_mac << "\n";
+        continue;
+      }
 
-        auto [sx, sy] = sensor_positions[r.sensor_mac];
+      auto [sx, sy] = sensor_positions[r.sensor_mac];
 
-        // convert rssi to distance
-        double dist = rssi_to_distance(r.avg_rssi);
+      // convert rssi to distance
+      double dist = rssi_to_distance(r.avg_rssi);
 
-        distances.push_back(dist);
-        coords.push_back({sx, sy});
+      distances.push_back(dist);
+      coords.push_back({sx, sy});
     }
-    if (distances.size() == 3) { // need to check theres enough sensors to trilaterate
-        double r1 = distances[0];
-        double r2 = distances[1];
-        double r3 = distances[2];
+    if (distances.size() ==
+        3) { // need to check theres enough sensors to trilaterate
+      double r1 = distances[0];
+      double r2 = distances[1];
+      double r3 = distances[2];
 
-        double sx1 = coords[0].first, sy1 = coords[0].second;
-        double sx2 = coords[1].first, sy2 = coords[1].second;
-        double sx3 = coords[2].first, sy3 = coords[2].second;
+      double sx1 = coords[0].first, sy1 = coords[0].second;
+      double sx2 = coords[1].first, sy2 = coords[1].second;
+      double sx3 = coords[2].first, sy3 = coords[2].second;
 
-        auto [x, y] = trilaterate(sx1, sy1, r1, sx2, sy2, r2, sx3, sy3, r3 );
+      auto [x, y] = trilaterate(sx1, sy1, r1, sx2, sy2, r2, sx3, sy3, r3);
 
-        if (std::isnan(x) || std::isnan(y)) {
-            cout << "[TRILATERATION] Failed — geometry degenerate\n";
-        } else {
-            cout << "[TRILATERATION] Position estimate: ("
-                << x << ", " << y << ")\n";
-        }
+      if (std::isnan(x) || std::isnan(y)) {
+        cout << "[TRILATERATION] Failed — geometry degenerate\n";
+      } else {
+        cout << "[TRILATERATION] Position estimate: (" << x << ", " << y
+             << ")\n";
+      }
     } else {
-        cout << "[TRILATERATION] Not enough sensors: "
-            << distances.size() << " available\n";
+      cout << "[TRILATERATION] Not enough sensors: " << distances.size()
+           << " available\n";
     }
 
     this_thread::sleep_for(chrono::milliseconds(200));
