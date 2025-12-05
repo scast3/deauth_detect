@@ -268,7 +268,7 @@ int main() {
     // could just choose top index, if that makes it any faster, n
     auto latest_ts_result = con.Query("SELECT MAX(timestamp) FROM events;");
     if (latest_ts_result->HasError() ||
-        latest_ts_result->GetValue(0, 0) == nullptr) {
+        latest_ts_result->GetValue(0, 0).IsNull()) {
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
@@ -311,7 +311,7 @@ int main() {
     // iterate through the 3 sensors and populate the readings vec
     for (size_t i = 0; i < result->RowCount(); i++) {
       SensorReading sr;
-      sr.sensor_mac = result->GetValue<char*>(0, i);
+      sr.sensor_mac = result->GetValue<char *>(0, i);
       sr.avg_rssi = result->GetValue<double>(1, i);
       sr.avg_variance = result->GetValue<double>(2, i);
       sr.frame_count = result->GetValue<int32_t>(3, i);
