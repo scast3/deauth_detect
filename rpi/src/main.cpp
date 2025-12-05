@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <vector>
 
+using std::string;
 using namespace std;
 
 static double sensor_x1 = 0, sensor_y1 = 0;
@@ -300,7 +301,7 @@ int main() {
     // to expand window to hit all 3 sensors
 
     struct SensorReading { // calculating the averages on the window
-      char *sensor_mac;
+      string sensor_mac;
       float avg_rssi;
       float avg_variance;
       int frame_count; // maybe rename
@@ -313,7 +314,7 @@ int main() {
       SensorReading sr;
       // column order from the SQL:
       // 0 = sensor_mac, 1 = avg_rssi, 2 = avg_variance, 3 = frame_count
-      sr.sensor_mac = result->GetValue<char *>(0, i);
+      sr.sensor_mac = result->GetValue<string>(0, i);
       sr.avg_rssi = static_cast<float>(result->GetValue<double>(1, i));
       sr.avg_variance = static_cast<float>(result->GetValue<double>(2, i));
       sr.frame_count = result->GetValue<int32_t>(3, i);
