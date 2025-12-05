@@ -279,24 +279,23 @@ int main() {
     uint64_t ts_min = ts_max - window_us;
 
     // add main query here
-    string query =
-        "SELECT sensor_mac, "
-        "       AVG(rssi_mean) AS avg_rssi, "
-        "       AVG(rssi_variance) AS avg_variance, "
-        "       COUNT(*) AS frame_count "
-        "FROM events "
-        "WHERE timestamp >= " +
-        to_string(ts_min) + " AND timestamp <= " + to_string(ts_max) +
-        " GROUP BY sensor_mac;"; // choosing the raw rssi values from each
-                                 // sensor within the timestamp in the window
-
+string query =
+    "SELECT DISTINCT ON (sensor_mac) "
+    "    sensor_mac, "
+    "    rssi_mean, "
+    "    rssi_variance, "
+    "    frame_count, "
+    "    timestamp "
+    "FROM events "
+    "ORDER BY sensor_mac, timestamp DESC;";
+    
     auto result = con.Query(query); // check if fails
     if (result->HasError()) {
       cerr << "[main] Query failed: " << result->GetError() << endl;
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
-    cout << "  [debug] result struct: " << result->ToString() << "\n";
+    cout << "  [debug] result struct: " << result << "\n";
 
     // row count of this result should ideally be 3, if not, then we prob need
     // to expand window to hit all 3 sensors
