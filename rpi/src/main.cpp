@@ -23,13 +23,13 @@ using std::string;
 using namespace std;
 
 static double sensor_x1 = 0, sensor_y1 = 0;
-static double sensor_x2 = 3.0, sensor_y2 = 0;
-static double sensor_x3 = 1.5, sensor_y3 = 2.5;
+static double sensor_x2 = 2, sensor_y2 = 0;
+static double sensor_x3 = 1, sensor_y3 = 1.73;
 map<string, pair<double, double>> sensor_positions = {
-    {"AA:BB:CC:01:01:01",
+    {"00:4B:12:3C:04:B0",
      {sensor_x1, sensor_y1}}, // put actual mac addresses ine here
-    {"AA:BB:CC:02:02:02", {sensor_x2, sensor_y2}},
-    {"AA:BB:CC:03:03:03", {sensor_x3, sensor_y3}}};
+    {"78:1C:3C:E3:AB:CC", {sensor_x2, sensor_y2}},
+    {"78:1C:3C:2D:15:D4", {sensor_x3, sensor_y3}}};
 
 // we might need to change from raw rssi to some regression funciton to get
 // distance, let's test this out x and y values should be fixed, only thing
