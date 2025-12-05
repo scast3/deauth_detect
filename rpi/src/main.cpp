@@ -244,7 +244,7 @@ int main() {
   cerr << "[main] Serial port configured" << endl;
 
   // Configure DuckDB
-  duckdb::DuckDB db("events.db");
+  duckdb::DuckDB db(nullptr);
   duckdb::Connection con(db);
   con.Query("CREATE TABLE IF NOT EXISTS events (timestamp BIGINT, attack_mac "
             "VARCHAR(17), sensor_mac VARCHAR(17), rssi_mean INT, rssi_variance "
@@ -314,7 +314,7 @@ int main() {
       SensorReading sr;
       // column order from the SQL:
       // 0 = sensor_mac, 1 = avg_rssi, 2 = avg_variance, 3 = frame_count
-      sr.sensor_mac = result->GetValue<string>(0, i);
+      sr.sensor_mac = result->GetValue(0, i).ToString();
       sr.avg_rssi = static_cast<float>(result->GetValue<double>(1, i));
       sr.avg_variance = static_cast<float>(result->GetValue<double>(2, i));
       sr.frame_count = result->GetValue<int32_t>(3, i);
