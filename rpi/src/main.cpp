@@ -287,8 +287,8 @@ int main() {
         "FROM events "
         "WHERE timestamp >= " +
         to_string(ts_min) + " AND timestamp <= " + to_string(ts_max) +
-        "GROUP BY sensor_mac;"; // choosing the raw rssi values from each sensor
-                                // within the timestamp in the window
+        " GROUP BY sensor_mac;"; // choosing the raw rssi values from each
+                                 // sensor within the timestamp in the window
 
     auto result = con.Query(query); // check if fails
     if (result->HasError()) {
