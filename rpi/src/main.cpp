@@ -22,6 +22,7 @@
 using std::string;
 using namespace std;
 
+// Static positions of sensors
 static double sensor_x1 = 0, sensor_y1 = 0;
 static double sensor_x2 = 2, sensor_y2 = 0;
 static double sensor_x3 = 1, sensor_y3 = 1.73;
@@ -274,32 +275,41 @@ int main() {
       continue;
     }
 
+    // Current result is the max timstamp value
     uint64_t ts_max = latest_ts_result->GetValue<uint64_t>(0, 0);
-    uint64_t window_us = 2000; // for a 2ms window
+
+    // Delete data older than 24 hrs
+    uint64_t cutoff_time = ts_max - (24ULL * 3600 * 1000000);
+    con.Query("DELETE FROM events WHERE timestamp < " + to_string(cutoff_time) +
+              ";");
+
+    // Calculate min ts for window
+    uint64_t window_us = 20000; // for a 2s window
     uint64_t ts_min = ts_max - window_us;
 
-    // add main query here
-string query =
-    "SELECT DISTINCT ON (sensor_mac) "
-    "    sensor_mac, "
-    "    rssi_mean, "
-    "    rssi_variance, "
-    "    frame_count, "
-    "    timestamp "
-    "FROM events "
-    "ORDER BY sensor_mac, timestamp DESC;";
-    
+    // Unique events based on MAC within current window
+    string query = "SELECT DISTINCT ON (sensor_mac) "
+                   "    sensor_mac, "
+                   "    rssi_mean, "
+                   "    rssi_variance, "
+                   "    frame_count, "
+                   "    timestamp "
+                   "FROM events "
+                   "WHERE timestamp >= " +
+                   to_string(ts_min) +
+                   " AND timestamp <= " + to_string(ts_max) +
+                   " "
+                   "ORDER BY sensor_mac, timestamp DESC;";
+
     auto result = con.Query(query); // check if fails
     if (result->HasError()) {
       cerr << "[main] Query failed: " << result->GetError() << endl;
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
-    //cout << "  [debug] result struct: " << result.ToString() << "\n";
+    // cout << "  [debug] result struct: " << result.ToString() << "\n";
 
-    // row count of this result should ideally be 3, if not, then we prob need
-    // to expand window to hit all 3 sensors
-
+    // Struct for trilaterateration
     struct SensorReading { // calculating the averages on the window
       string sensor_mac;
       float avg_rssi;
@@ -372,7 +382,8 @@ string query =
            << " available\n";
     }
 
-    this_thread::sleep_for(chrono::milliseconds(200));
+    // Run this thread every 2s
+    this_thread::sleep_for(chrono::seconds(2));
   }
 
   // Shutdown
