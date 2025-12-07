@@ -1,5 +1,6 @@
 #include "../include/esp32_to_uart.h"
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -18,14 +19,13 @@
 #include <tuple>
 #include <unistd.h>
 #include <vector>
-#include <cassert>
 
 using std::string;
 using namespace std;
 
 static double sensor_x1 = 0, sensor_y1 = 0;
 static double sensor_x2 = 2, sensor_y2 = 0;
-static double sensor_x3 = 0, sensor_y3 = 3;
+static double sensor_x3 = 1, sensor_y3 = 1.8;
 map<string, pair<double, double>> sensor_positions = {
     {"00:4B:12:3C:04:B0",
      {sensor_x1, sensor_y1}}, // put actual mac addresses ine here
@@ -55,43 +55,45 @@ std::tuple<double, double> trilaterate(double x1, double y1, double r1,
   return {x, y};
 }
 
+bool multilateration_least_squares(const vector<pair<double, double>> &sensors,
+                                   const vector<double> &ranges, double &out_x,
+                                   double &out_y) {
+  size_t N = sensors.size();
+  if (N < 3 || ranges.size() != N)
+    return false;
 
-bool multilateration_least_squares(const vector<pair<double,double>>& sensors, const vector<double>& ranges, double &out_x, double &out_y){
-    size_t N = sensors.size();
-    if (N < 3 || ranges.size() != N) return false;
+  // ref sensor
+  double x1 = sensors[0].first, y1 = sensors[0].second, r1 = ranges[0];
 
-    // ref sensor
-    double x1 = sensors[0].first, y1 = sensors[0].second, r1 = ranges[0];
+  // A (N-1 x 2) and b (N-1)
+  double ATA00 = 0, ATA01 = 0, ATA11 = 0;
+  double ATb0 = 0, ATb1 = 0;
 
-    // A (N-1 x 2) and b (N-1)
-    double ATA00 = 0, ATA01 = 0, ATA11 = 0;
-    double ATb0 = 0, ATb1 = 0;
+  for (size_t i = 1; i < N; ++i) { // N-1
+    double xi = sensors[i].first, yi = sensors[i].second, ri = ranges[i];
 
-    for (size_t i = 1; i < N; ++i) { //N-1
-        double xi = sensors[i].first, yi = sensors[i].second, ri = ranges[i];
+    double Ai0 = 2 * (xi - x1);
+    double Ai1 = 2 * (yi - y1);
+    double bi = r1 * r1 - ri * ri - x1 * x1 + xi * xi - y1 * y1 + yi * yi;
 
-        double Ai0 = 2*(xi - x1);
-        double Ai1 = 2*(yi - y1);
-        double bi = r1*r1 - ri*ri - x1*x1 + xi*xi - y1*y1 + yi*yi;
+    // accumulate ATA = A^T * A and ATb = A^T * b
+    ATA00 += Ai0 * Ai0;
+    ATA01 += Ai0 * Ai1;
+    ATA11 += Ai1 * Ai1;
 
-        // accumulate ATA = A^T * A and ATb = A^T * b
-        ATA00 += Ai0 * Ai0;
-        ATA01 += Ai0 * Ai1;
-        ATA11 += Ai1 * Ai1;
+    ATb0 += Ai0 * bi;
+    ATb1 += Ai1 * bi;
+  }
 
-        ATb0 += Ai0 * bi;
-        ATb1 += Ai1 * bi;
-    }
+  double det = ATA00 * ATA11 - ATA01 * ATA01;
+  if (fabs(det) < 1e-12) {
+    return false; // degenerate or ill-conditioned
+  }
 
-    double det = ATA00 * ATA11 - ATA01 * ATA01;
-    if (fabs(det) < 1e-12) {
-        return false; // degenerate or ill-conditioned
-    }
-
-    // Solve 2x2 system (ATA) * p = ATb
-    out_x = (ATb0 * ATA11 - ATA01 * ATb1) / det;
-    out_y = (ATA00 * ATb1 - ATb0 * ATA01) / det;
-    return true;
+  // Solve 2x2 system (ATA) * p = ATb
+  out_x = (ATb0 * ATA11 - ATA01 * ATb1) / det;
+  out_y = (ATA00 * ATb1 - ATb0 * ATA01) / det;
+  return true;
 }
 // i am realizing we may beed a custom rssi to distance function calibrated for
 // each reciever
@@ -418,15 +420,17 @@ int main() {
     // }
     double px, py;
     if (multilateration_least_squares(coords, distances, px, py)) {
-        cout << "[TRI] LS position: ("<<px<<","<<py<<")\n";
+      cout << "[TRI] LS position: (" << px << "," << py << ")\n";
     } else {
-        cout << "[TRI] LS failed — trying direct trilaterate if exactly 3 sensors.\n";
-        if (coords.size()==3) {
-            auto [x,y] = trilaterate(coords[0].first, coords[0].second, distances[0],
-                                    coords[1].first, coords[1].second, distances[1],
-                                    coords[2].first, coords[2].second, distances[2]);
-            cout << "[TRI] direct: ("<<x<<","<<y<<")\n";
-        }
+      cout << "[TRI] LS failed — trying direct trilaterate if exactly 3 "
+              "sensors.\n";
+      if (coords.size() == 3) {
+        auto [x, y] =
+            trilaterate(coords[0].first, coords[0].second, distances[0],
+                        coords[1].first, coords[1].second, distances[1],
+                        coords[2].first, coords[2].second, distances[2]);
+        cout << "[TRI] direct: (" << x << "," << y << ")\n";
+      }
     }
 
     this_thread::sleep_for(chrono::milliseconds(200));
