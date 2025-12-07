@@ -286,7 +286,7 @@ int main() {
               ";");
 
     // Calculate min ts for window
-    uint64_t window_us = 200000; // for a 2s window
+    uint64_t window_us = 2000000; // for a 2s window
     uint64_t ts_min = ts_max - window_us;
 
     // Unique events based on MAC within current window
