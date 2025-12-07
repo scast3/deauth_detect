@@ -24,7 +24,7 @@ using namespace std;
 
 static double sensor_x1 = 0, sensor_y1 = 0;
 static double sensor_x2 = 2, sensor_y2 = 0;
-static double sensor_x3 = 1, sensor_y3 = 1.73;
+static double sensor_x3 = 0, sensor_y3 = 3;
 map<string, pair<double, double>> sensor_positions = {
     {"00:4B:12:3C:04:B0",
      {sensor_x1, sensor_y1}}, // put actual mac addresses ine here
@@ -56,13 +56,12 @@ std::tuple<double, double> trilaterate(double x1, double y1, double r1,
 // i am realizing we may beed a custom rssi to distance function calibrated for
 // each reciever
 double rssi_to_distance(int rssi) {
-    double RSSI0 = -40;   // RSSI at 1 meter
-    double n = 2.0;       // path-loss exponent, this should stay the same
+  double RSSI0 = -40; // RSSI at 1 meter
+  double n = 2.0;     // path-loss exponent, this should stay the same
 
-    double exponent = (RSSI0 - rssi) / (10 * n);
-    return pow(10.0, exponent);
+  double exponent = (RSSI0 - rssi) / (10 * n);
+  return pow(10.0, exponent);
 }
-
 
 struct __attribute__((packed)) wifi_deauth_event_t {
   uint8_t attack_mac[6];
@@ -324,7 +323,8 @@ int main() {
          << readings.size() << " sensors\n";
 
     for (auto &r : readings) {
-      cout << "  Sensor: " << r.sensor_mac << "  avg_rssi=" << r.avg_rssi << "calculated dist=" << rssi_to_distance(r.avg_rssi)
+      cout << "  Sensor: " << r.sensor_mac << "  avg_rssi=" << r.avg_rssi
+           << "calculated dist=" << rssi_to_distance(r.avg_rssi)
            << "  var=" << r.avg_variance << "  frames=" << r.frame_count
            << "\n";
     } // debug prints
