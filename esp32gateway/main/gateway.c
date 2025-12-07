@@ -82,8 +82,6 @@ void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
   printf("From Sensor MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
          event.sensor_mac[0], event.sensor_mac[1], event.sensor_mac[2],
          event.sensor_mac[3], event.sensor_mac[4], event.sensor_mac[5]);
-  printf("RSSI: %d dBm\n", event.rssi_mean);
-  printf("Timestamp: %llu us\n", event.timestamp);
   uart_write_bytes(uart_num, &event, sizeof(event));
 }
 
