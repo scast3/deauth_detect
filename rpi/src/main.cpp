@@ -324,7 +324,7 @@ int main() {
          << readings.size() << " sensors\n";
 
     for (auto &r : readings) {
-      cout << "  Sensor: " << r.sensor_mac << "  avg_rssi=" << r.avg_rssi
+      cout << "  Sensor: " << r.sensor_mac << "  avg_rssi=" << r.avg_rssi << "calculated dist=" << rssi_to_distance(r.avg_rssi)
            << "  var=" << r.avg_variance << "  frames=" << r.frame_count
            << "\n";
     } // debug prints
