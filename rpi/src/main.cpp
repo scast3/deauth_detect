@@ -357,8 +357,8 @@ int main() {
       // column order from the SQL:
       // 0 = sensor_mac, 1 = avg_rssi, 2 = avg_variance, 3 = frame_count
       sr.sensor_mac = result->GetValue(0, i).ToString();
-      sr.avg_rssi = static_cast<float>(result->GetValue<double>(1, i));
-      sr.avg_variance = static_cast<float>(result->GetValue<double>(2, i));
+      sr.avg_rssi = result->GetValue<float>(1, i);
+      sr.avg_variance = result->GetValue<float>(2, i);
       sr.frame_count = result->GetValue<int32_t>(3, i);
       readings.push_back(std::move(sr));
     }
