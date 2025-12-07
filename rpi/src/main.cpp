@@ -98,15 +98,16 @@ bool multilateration_least_squares(const vector<pair<double, double>> &sensors,
 // i am realizing we may beed a custom rssi to distance function calibrated for
 // each reciever
 double rssi_to_distance(int rssi) {
-  double RSSI0 = -40; // RSSI at 1 meter, sensor 1: -41, sensor 2: -39, sensor 3: -41  
-  double n = 2.0;     // path-loss exponent, this should stay the same
+  double RSSI0 =
+      -40; // RSSI at 1 meter, sensor 1: -41, sensor 2: -39, sensor 3: -41
+  double n = 2.0; // path-loss exponent, this should stay the same
 
   double exponent = (RSSI0 - rssi) / (10 * n);
   return pow(10.0, exponent);
 }
 
 double rssi_to_distance_s1(int rssi) {
-  double RSSI0 = -41; 
+  double RSSI0 = -41;
   double n = 3.0;
 
   double exponent = (RSSI0 - rssi) / (10 * n);
@@ -121,8 +122,8 @@ double rssi_to_distance_s2(int rssi) {
   return pow(10.0, exponent);
 }
 double rssi_to_distance_s3(int rssi) {
-  double RSSI0 = -41; 
-  double n = 3.0;  
+  double RSSI0 = -41;
+  double n = 3.0;
 
   double exponent = (RSSI0 - rssi) / (10 * n);
   return pow(10.0, exponent);
@@ -312,7 +313,7 @@ int main() {
   // Configure DuckDB
   duckdb::DuckDB db(nullptr);
   duckdb::Connection con(db);
-  con.Query("CREATE TABLE IF NOT EXISTS events (timestamp BIGINT, attack_mac "
+  con.Query("CREATE TABLE IF NOT EXISTS events (timestamp UBIGINT, attack_mac "
             "VARCHAR(17), sensor_mac VARCHAR(17), rssi_mean INT, rssi_variance "
             "FLOAT, frame_count INT)");
   con.Query("CREATE INDEX idx_timestamp ON events (timestamp)");
