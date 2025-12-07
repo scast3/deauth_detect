@@ -98,7 +98,7 @@ bool multilateration_least_squares(const vector<pair<double, double>> &sensors,
 // i am realizing we may beed a custom rssi to distance function calibrated for
 // each reciever
 double rssi_to_distance(int rssi) {
-  double RSSI0 = -40; // RSSI at 1 meter
+  double RSSI0 = -40; // RSSI at 1 meter, sensor 1: -41, sensor 2: -39, sensor 3: -41  
   double n = 2.0;     // path-loss exponent, this should stay the same
 
   double exponent = (RSSI0 - rssi) / (10 * n);
@@ -357,8 +357,8 @@ int main() {
       // column order from the SQL:
       // 0 = sensor_mac, 1 = avg_rssi, 2 = avg_variance, 3 = frame_count
       sr.sensor_mac = result->GetValue(0, i).ToString();
-      sr.avg_rssi = result->GetValue<float>(1, i);
-      sr.avg_variance = result->GetValue<float>(2, i);
+      sr.avg_rssi = static_cast<float>(result->GetValue<double>(1, i));
+      sr.avg_variance = static_cast<float>(result->GetValue<double>(2, i));
       sr.frame_count = result->GetValue<int32_t>(3, i);
       readings.push_back(std::move(sr));
     }
