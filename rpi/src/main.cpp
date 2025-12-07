@@ -99,7 +99,7 @@ bool multilateration_least_squares(const vector<pair<double, double>> &sensors,
 // each reciever
 double rssi_to_distance(int rssi) {
   double RSSI0 = -40; // RSSI at 1 meter, sensor 1: -41, sensor 2: -39, sensor 3: -41  
-  double n = 2.0;     // path-loss exponent, this should stay the same
+  double n = 4.0;     // path-loss exponent, this should stay the same
 
   double exponent = (RSSI0 - rssi) / (10 * n);
   return pow(10.0, exponent);
