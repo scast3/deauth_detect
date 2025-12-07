@@ -18,6 +18,7 @@
 #include <tuple>
 #include <unistd.h>
 #include <vector>
+#include <cassert>
 
 using std::string;
 using namespace std;
@@ -52,6 +53,45 @@ std::tuple<double, double> trilaterate(double x1, double y1, double r1,
   double x = (C * E - B * F) / denominator;
   double y = (A * F - C * D) / denominator;
   return {x, y};
+}
+
+
+bool multilateration_least_squares(const vector<pair<double,double>>& sensors, const vector<double>& ranges, double &out_x, double &out_y){
+    size_t N = sensors.size();
+    if (N < 3 || ranges.size() != N) return false;
+
+    // ref sensor
+    double x1 = sensors[0].first, y1 = sensors[0].second, r1 = ranges[0];
+
+    // A (N-1 x 2) and b (N-1)
+    double ATA00 = 0, ATA01 = 0, ATA11 = 0;
+    double ATb0 = 0, ATb1 = 0;
+
+    for (size_t i = 1; i < N; ++i) { //N-1
+        double xi = sensors[i].first, yi = sensors[i].second, ri = ranges[i];
+
+        double Ai0 = 2*(xi - x1);
+        double Ai1 = 2*(yi - y1);
+        double bi = r1*r1 - ri*ri - x1*x1 + xi*xi - y1*y1 + yi*yi;
+
+        // accumulate ATA = A^T * A and ATb = A^T * b
+        ATA00 += Ai0 * Ai0;
+        ATA01 += Ai0 * Ai1;
+        ATA11 += Ai1 * Ai1;
+
+        ATb0 += Ai0 * bi;
+        ATb1 += Ai1 * bi;
+    }
+
+    double det = ATA00 * ATA11 - ATA01 * ATA01;
+    if (fabs(det) < 1e-12) {
+        return false; // degenerate or ill-conditioned
+    }
+
+    // Solve 2x2 system (ATA) * p = ATb
+    out_x = (ATb0 * ATA11 - ATA01 * ATb1) / det;
+    out_y = (ATA00 * ATb1 - ATb0 * ATA01) / det;
+    return true;
 }
 // i am realizing we may beed a custom rssi to distance function calibrated for
 // each reciever
@@ -354,28 +394,29 @@ int main() {
       distances.push_back(dist);
       coords.push_back({sx, sy});
     }
-    if (distances.size() ==
-        3) { // need to check theres enough sensors to trilaterate
-      double r1 = distances[0];
-      double r2 = distances[1];
-      double r3 = distances[2];
+    // if (distances.size() ==
+    //     3) { // need to check theres enough sensors to trilaterate
+    //   double r1 = distances[0];
+    //   double r2 = distances[1];
+    //   double r3 = distances[2];
 
-      double sx1 = coords[0].first, sy1 = coords[0].second;
-      double sx2 = coords[1].first, sy2 = coords[1].second;
-      double sx3 = coords[2].first, sy3 = coords[2].second;
+    //   double sx1 = coords[0].first, sy1 = coords[0].second;
+    //   double sx2 = coords[1].first, sy2 = coords[1].second;
+    //   double sx3 = coords[2].first, sy3 = coords[2].second;
 
-      auto [x, y] = trilaterate(sx1, sy1, r1, sx2, sy2, r2, sx3, sy3, r3);
+    //   auto [x, y] = trilaterate(sx1, sy1, r1, sx2, sy2, r2, sx3, sy3, r3);
 
-      if (std::isnan(x) || std::isnan(y)) {
-        cout << "[TRILATERATION] Failed — geometry degenerate\n";
-      } else {
-        cout << "[TRILATERATION] Position estimate: (" << x << ", " << y
-             << ")\n";
-      }
-    } else {
-      cout << "[TRILATERATION] Not enough sensors: " << distances.size()
-           << " available\n";
-    }
+    //   if (std::isnan(x) || std::isnan(y)) {
+    //     cout << "[TRILATERATION] Failed — geometry degenerate\n";
+    //   } else {
+    //     cout << "[TRILATERATION] Position estimate: (" << x << ", " << y
+    //          << ")\n";
+    //   }
+    // } else {
+    //   cout << "[TRILATERATION] Not enough sensors: " << distances.size()
+    //        << " available\n";
+    // }
+
 
     this_thread::sleep_for(chrono::milliseconds(200));
   }
