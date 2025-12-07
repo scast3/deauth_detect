@@ -297,10 +297,10 @@ int main() {
                    "    frame_count, "
                    "    timestamp "
                    "FROM events "
-                   "WHERE timestamp >= " +
-                   to_string(ts_min) +
-                   " AND timestamp <= " + to_string(ts_max) +
-                   " "
+                   //"WHERE timestamp >= " +
+                   // to_string(ts_min) +
+                   //" AND timestamp <= " + to_string(ts_max) +
+                   //" "
                    "ORDER BY sensor_mac, timestamp DESC;";
 
     auto result = con.Query(query); // check if fails
