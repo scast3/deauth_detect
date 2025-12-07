@@ -56,13 +56,13 @@ std::tuple<double, double> trilaterate(double x1, double y1, double r1,
 // i am realizing we may beed a custom rssi to distance function calibrated for
 // each reciever
 double rssi_to_distance(int rssi) {
-  // Example quadratic model: d = a*rssi^2 + b*rssi + c
-  // double a = -0.0025;
-  // double b = 0.35;
-  // double c = -5.0;
-  return rssi;
-  // regression, will need to look at my notes from senior design
+    double RSSI0 = -40;   // RSSI at 1 meter
+    double n = 2.0;       // path-loss exponent, this should stay the same
+
+    double exponent = (RSSI0 - rssi) / (10 * n);
+    return pow(10.0, exponent);
 }
+
 
 struct __attribute__((packed)) wifi_deauth_event_t {
   uint8_t attack_mac[6];
