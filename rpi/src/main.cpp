@@ -105,6 +105,29 @@ double rssi_to_distance(int rssi) {
   return pow(10.0, exponent);
 }
 
+double rssi_to_distance_s1(int rssi) {
+  double RSSI0 = -41; 
+  double n = 3.0;
+
+  double exponent = (RSSI0 - rssi) / (10 * n);
+  return pow(10.0, exponent);
+}
+
+double rssi_to_distance_s2(int rssi) {
+  double RSSI0 = -39;
+  double n = 3.0;
+
+  double exponent = (RSSI0 - rssi) / (10 * n);
+  return pow(10.0, exponent);
+}
+double rssi_to_distance_s3(int rssi) {
+  double RSSI0 = -41; 
+  double n = 3.0;  
+
+  double exponent = (RSSI0 - rssi) / (10 * n);
+  return pow(10.0, exponent);
+}
+
 struct __attribute__((packed)) wifi_deauth_event_t {
   uint8_t attack_mac[6];
   uint8_t sensor_mac[6];
