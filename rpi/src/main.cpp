@@ -207,19 +207,19 @@ void insert_events(duckdb::Appender *appender) {
                             current_event.frame_count);
       }
 
-      cerr << "[insert_events] Flushing appender..." << endl;
+      // cerr << "[insert_events] Flushing appender..." << endl;
       appender->Flush();
 
       // Clean up old bucket and move to new one
       qbuckets.erase(current_qbucket);
       current_qbucket = event.timestamp; // ← Now update to new bucket
-      cerr << "[insert_events] New qbucket=" << current_qbucket << endl;
+      // cerr << "[insert_events] New qbucket=" << current_qbucket << endl;
     }
 
     // Add incoming event to CURRENT bucket (whether new or existing)
     qbuckets[current_qbucket].push_back(event);
-    cerr << "[insert_events] Added event to current bucket ("
-         << qbuckets[current_qbucket].size() << " total)" << endl;
+    /*cerr << "[insert_events] Added event to current bucket ("
+         << qbuckets[current_qbucket].size() << " total)" << endl; */
 
     rows++;
   }
