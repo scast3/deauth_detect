@@ -119,7 +119,7 @@ void read_events(int fd) {
       continue;
     }
 
-    event.timestamp = now_us();
+    // event.timestamp = now_us();
 
     /*cerr << "[read_events] Event received: attack="
          << bytes_to_mac(event.attack_mac)
