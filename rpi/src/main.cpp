@@ -25,11 +25,11 @@ using namespace std;
 
 static double sensor_x1 = 0, sensor_y1 = 0;
 static double sensor_x2 = 2, sensor_y2 = 0;
-static double sensor_x3 = 1, sensor_y3 = 1.8;
+static double sensor_x3 = 0, sensor_y3 = 2;
 map<string, pair<double, double>> sensor_positions = {
-    {"00:4B:12:3C:04:B0",
+    {"78:1C:3C:E3:AB:CC",
      {sensor_x1, sensor_y1}}, // put actual mac addresses ine here
-    {"78:1C:3C:E3:AB:CC", {sensor_x2, sensor_y2}},
+    {"00:4B:12:3C:04:B0", {sensor_x2, sensor_y2}},
     {"78:1C:3C:2D:15:D4", {sensor_x3, sensor_y3}}};
 
 // we might need to change from raw rssi to some regression funciton to get
