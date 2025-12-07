@@ -121,21 +121,21 @@ void read_events(int fd) {
 
     // event.timestamp = now_us();
 
-    cerr << "[read_events] Event received: attack="
+    /*cerr << "[read_events] Event received: attack="
          << bytes_to_mac(event.attack_mac)
          << " sensor=" << bytes_to_mac(event.sensor_mac)
          << " rssi_mean=" << (int)event.rssi_mean
          << " frame_count=" << event.frame_count << " ts=" << event.timestamp
          << endl;
-
+*/
     // CRITICAL SECTION
     {
       lock_guard<mutex> lock(event_queue_mutex);
       event_queue.push(event);
     }
-    cerr << "[read_events] Event pushed to queue (size=" << event_queue.size()
+    /*cerr << "[read_events] Event pushed to queue (size=" << event_queue.size()
          << ")" << endl;
-
+*/
     event_queue_cv.notify_one();
   }
 
@@ -166,21 +166,22 @@ void insert_events(duckdb::Appender *appender) {
 
       event = event_queue.front();
       event_queue.pop();
-      cerr << "[insert_events] Popped event from queue" << endl;
+      // cerr << "[insert_events] Popped event from queue" << endl;
     }
 
     // Set the first quantum bucket index as the first timestamp
     if (rows == 0) {
       current_qbucket = event.timestamp;
-      cerr << "[insert_events] Starting first qbucket at " << current_qbucket
-           << endl;
+      /*cerr << "[insert_events] Starting first qbucket at " << current_qbucket
+           << endl; */
     }
 
     // If incoming timestamp exceeds (current index + quantum)
     if ((event.timestamp - current_qbucket) > quantum) {
-      cerr << "[insert_events] Closing qbucket " << current_qbucket << " with "
+      /*cerr << "[insert_events] Closing qbucket " << current_qbucket << " with
+         "
            << qbuckets[current_qbucket].size() << " events" << endl;
-
+*/
       // Sort completed bucket (the OLD bucket)
       sort(qbuckets[current_qbucket].begin(), qbuckets[current_qbucket].end(),
            [](const wifi_deauth_event_t &a, const wifi_deauth_event_t &b) {
@@ -189,12 +190,13 @@ void insert_events(duckdb::Appender *appender) {
 
       // Append sorted bucket to DB
       for (const auto &current_event : qbuckets[current_qbucket]) {
-        cerr << "[insert_events] Appending event ts=" << current_event.timestamp
-             << " attack=" << bytes_to_mac(current_event.attack_mac)
-             << " sensor=" << bytes_to_mac(current_event.sensor_mac)
-             << " rssi=" << (int)current_event.rssi_mean
-             << " frames=" << current_event.frame_count << endl;
-
+        /*       cerr << "[insert_events] Appending event ts=" <<
+           current_event.timestamp
+                    << " attack=" << bytes_to_mac(current_event.attack_mac)
+                    << " sensor=" << bytes_to_mac(current_event.sensor_mac)
+                    << " rssi=" << (int)current_event.rssi_mean
+                    << " frames=" << current_event.frame_count << endl;
+       */
         appender->AppendRow(current_event.timestamp,
                             bytes_to_mac(current_event.attack_mac).c_str(),
                             bytes_to_mac(current_event.sensor_mac).c_str(),
@@ -203,19 +205,19 @@ void insert_events(duckdb::Appender *appender) {
                             current_event.frame_count);
       }
 
-      cerr << "[insert_events] Flushing appender..." << endl;
+      //     cerr << "[insert_events] Flushing appender..." << endl;
       appender->Flush();
 
       // Clean up old bucket and move to new one
       qbuckets.erase(current_qbucket);
       current_qbucket = event.timestamp; // ← Now update to new bucket
-      cerr << "[insert_events] New qbucket=" << current_qbucket << endl;
+      //    cerr << "[insert_events] New qbucket=" << current_qbucket << endl;
     }
 
     // Add incoming event to CURRENT bucket (whether new or existing)
     qbuckets[current_qbucket].push_back(event);
-    cerr << "[insert_events] Added event to current bucket ("
-         << qbuckets[current_qbucket].size() << " total)" << endl;
+    /* cerr << "[insert_events] Added event to current bucket ("
+          << qbuckets[current_qbucket].size() << " total)" << endl; */
 
     rows++;
   }
@@ -323,13 +325,13 @@ int main() {
          << readings.size() << " sensors\n";
 
     for (auto &r : readings) {
-      cout << "  Sensor: " << r.sensor_mac
-         << "  coords=(" << sensor_positions[r.sensor_mac].first; << ", " << sensor_positions[r.sensor_mac].second; << ")"
-         << "  avg_rssi=" << r.avg_rssi
-         << "  calculated dist=" << rssi_to_distance(r.avg_rssi)
-         << "  var=" << r.avg_variance
-         << "  frames=" << r.frame_count
-         << "\n";
+      cout << "  Sensor: " << r.sensor_mac << "  coords=("
+           << sensor_positions[r.sensor_mac].first;
+      << ", " << sensor_positions[r.sensor_mac].second;
+      << ")"
+      << "  avg_rssi=" << r.avg_rssi
+      << "  calculated dist=" << rssi_to_distance(r.avg_rssi)
+      << "  var=" << r.avg_variance << "  frames=" << r.frame_count << "\n";
     } // debug prints
 
     // distance and triangulation math!!!
