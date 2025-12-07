@@ -342,7 +342,7 @@ int main() {
     }
 
     uint64_t ts_max = latest_ts_result->GetValue<uint64_t>(0, 0);
-    uint64_t window_us = 2000; // for a 2ms window
+    uint64_t window_us = 2000000; // for a 2ms window
     uint64_t ts_min = ts_max - window_us;
 
     // add main query here
@@ -457,7 +457,7 @@ int main() {
       }
     }
 
-    this_thread::sleep_for(chrono::milliseconds(200));
+    this_thread::sleep_for(chrono::seconds(2));
   }
 
   // Shutdown
