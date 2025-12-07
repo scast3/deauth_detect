@@ -135,7 +135,7 @@ struct __attribute__((packed)) wifi_deauth_event_t {
   int8_t rssi_mean;
   float rssi_variance;
   int frame_count;
-  uint64_t timestamp;
+  int64_t timestamp;
 };
 
 bool operator>(const wifi_deauth_event_t &a, const wifi_deauth_event_t &b) {
@@ -185,7 +185,7 @@ void read_events(int fd) {
       continue;
     }
 
-    // event.timestamp = now_us();
+    event.timestamp = now_us();
 
     /*cerr << "[read_events] Event received: attack="
          << bytes_to_mac(event.attack_mac)
@@ -313,7 +313,7 @@ int main() {
   // Configure DuckDB
   duckdb::DuckDB db(nullptr);
   duckdb::Connection con(db);
-  con.Query("CREATE TABLE IF NOT EXISTS events (timestamp UBIGINT, attack_mac "
+  con.Query("CREATE TABLE IF NOT EXISTS events (timestamp BIGINT, attack_mac "
             "VARCHAR(17), sensor_mac VARCHAR(17), rssi_mean INT, rssi_variance "
             "FLOAT, frame_count INT)");
   con.Query("CREATE INDEX idx_timestamp ON events (timestamp)");

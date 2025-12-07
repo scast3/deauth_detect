@@ -40,7 +40,7 @@ typedef struct __attribute__((packed)) {
   int8_t rssi_mean;
   float rssi_variance;
   int frame_count;
-  uint64_t timestamp;
+  int64_t timestamp;
 } wifi_deauth_event_t;
 
 // Initialize nvs storage partition

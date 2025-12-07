@@ -20,7 +20,7 @@ typedef struct __attribute__((packed)) {
   int8_t rssi_mean;
   float rssi_variance;
   int frame_count;
-  uint64_t timestamp;
+  int64_t timestamp;
 } wifi_deauth_event_t;
 // UART STUFF
 static const int uart_buffer_size = (1024 * 64);
@@ -72,8 +72,6 @@ void recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len) {
   }
   wifi_deauth_event_t event;
   memcpy(&event, data, sizeof(wifi_deauth_event_t));
-
-  event.timestamp = (uint64_t)esp_timer_get_time();
 
   printf("Deauth event received on gateway.\n");
   printf("Attacker MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", event.attack_mac[0],
