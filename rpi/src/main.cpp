@@ -416,7 +416,18 @@ int main() {
     //   cout << "[TRILATERATION] Not enough sensors: " << distances.size()
     //        << " available\n";
     // }
-
+    double px, py;
+    if (multilateration_least_squares(coords, distances, px, py)) {
+        cout << "[TRI] LS position: ("<<px<<","<<py<<")\n";
+    } else {
+        cout << "[TRI] LS failed — trying direct trilaterate if exactly 3 sensors.\n";
+        if (coords.size()==3) {
+            auto [x,y] = trilaterate(coords[0].first, coords[0].second, distances[0],
+                                    coords[1].first, coords[1].second, distances[1],
+                                    coords[2].first, coords[2].second, distances[2]);
+            cout << "[TRI] direct: ("<<x<<","<<y<<")\n";
+        }
+    }
 
     this_thread::sleep_for(chrono::milliseconds(200));
   }
