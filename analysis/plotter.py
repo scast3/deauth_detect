@@ -32,6 +32,16 @@ tests = {
         "estimate": (1.69843, 1.222)
     },
 
+    "Right Triangle Config (n=3)": {
+        "expected": (1.0, 2.0),
+        "sensors": {
+            "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.99526},
+            "78:1C:3C:2D:15:D4": {"pos": (0, 3), "dist": 1.16591},
+            "78:1C:3C:E3:AB:CC": {"pos": (0, 0), "dist": 2.32631},
+        },
+        "estimate": (1.35766,2.17539)
+    },
+
     "Right Triangle Config (n=4)": {
         "expected": (1.0, 1.0),
         "sensors": {
@@ -40,6 +50,16 @@ tests = {
             "78:1C:3C:E3:AB:CC": {"pos": (0, 0), "dist": 1.99526},
         },
         "estimate": (1.59904, 1.57216)
+    },
+
+    "Right Triangle Config (n=4)": {
+        "expected": (1.0, 2.0),
+        "sensors": {
+            "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.33352},
+            "78:1C:3C:2D:15:D4": {"pos": (0, 3), "dist": 1.33352},
+            "78:1C:3C:E3:AB:CC": {"pos": (0, 0), "dist": 1.77828},
+        },
+        "estimate": (1.346,1.73067)
     },
 
     "Iso Triangle Config (n=3)": {
@@ -52,6 +72,16 @@ tests = {
         "estimate": (2.68228, 1.15047)
     },
 
+    "Iso Triangle Config (n=3)": {
+        "expected": (1.0, 2.0),
+        "sensors": {
+            "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.99526},
+            "78:1C:3C:2D:15:D4": {"pos": (1, 3), "dist": 1.25893},
+            "78:1C:3C:E3:AB:CC": {"pos": (0, 0), "dist": 2.71227},
+        },
+        "estimate": (1.84384,2.01398)
+    },
+
     "Iso Triangle Config (n=4)": {
         "expected": (1.0, 1.0),
         "sensors": {
@@ -61,6 +91,16 @@ tests = {
         },
         "estimate": (1.14492, 0.817523)
     },
+
+    "Iso Triangle Config (n=4)": {
+        "expected": (1.0, 2.0),
+        "sensors": {
+            "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.88365},
+            "78:1C:3C:2D:15:D4": {"pos": (1, 3), "dist": 1.1885},
+            "78:1C:3C:E3:AB:CC": {"pos": (0, 0), "dist": 1.99526},
+        },
+        "estimate": (1.10823,1.72534)
+    }
 }
 
 
