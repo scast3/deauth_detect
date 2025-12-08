@@ -22,7 +22,7 @@ tests = {
         "estimate": (1.05425, 0.664464)
     },
 
-    "Right Triangle Config (n=3)": {
+    "Right Triangle Config 1 (n=3)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.35936},
@@ -32,7 +32,7 @@ tests = {
         "estimate": (1.69843, 1.222)
     },
 
-    "Right Triangle Config (n=3)": {
+    "Right Triangle Config 2 (n=3)": {
         "expected": (1.0, 2.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.99526},
@@ -42,7 +42,7 @@ tests = {
         "estimate": (1.35766,2.17539)
     },
 
-    "Right Triangle Config (n=4)": {
+    "Right Triangle Config 1 (n=4)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.25893},
@@ -52,7 +52,7 @@ tests = {
         "estimate": (1.59904, 1.57216)
     },
 
-    "Right Triangle Config (n=4)": {
+    "Right Triangle Config 2 (n=4)": {
         "expected": (1.0, 2.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.33352},
@@ -62,7 +62,7 @@ tests = {
         "estimate": (1.346,1.73067)
     },
 
-    "Iso Triangle Config (n=3)": {
+    "Iso Triangle Config 1 (n=3)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.35936},
@@ -72,7 +72,7 @@ tests = {
         "estimate": (2.68228, 1.15047)
     },
 
-    "Iso Triangle Config (n=3)": {
+    "Iso Triangle Config 2 (n=3)": {
         "expected": (1.0, 2.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.99526},
@@ -82,7 +82,7 @@ tests = {
         "estimate": (1.84384,2.01398)
     },
 
-    "Iso Triangle Config (n=4)": {
+    "Iso Triangle Config 1 (n=4)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.49624},
@@ -92,7 +92,7 @@ tests = {
         "estimate": (1.14492, 0.817523)
     },
 
-    "Iso Triangle Config (n=4)": {
+    "Iso Triangle Config 2 (n=4)": {
         "expected": (1.0, 2.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.88365},

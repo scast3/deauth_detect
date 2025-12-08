@@ -107,7 +107,7 @@ double rssi_to_distance(int rssi) {
 }
 
 double rssi_to_distance_s1(int rssi) {
-  double RSSI0 = -41;
+  double RSSI0 = -40;
   double n = 3.0;
 
   double exponent = (RSSI0 - rssi) / (10 * n);
@@ -115,14 +115,14 @@ double rssi_to_distance_s1(int rssi) {
 }
 
 double rssi_to_distance_s2(int rssi) {
-  double RSSI0 = -39;
+  double RSSI0 = -36;
   double n = 3.0;
 
   double exponent = (RSSI0 - rssi) / (10 * n);
   return pow(10.0, exponent);
 }
 double rssi_to_distance_s3(int rssi) {
-  double RSSI0 = -41;
+  double RSSI0 = -40;
   double n = 3.0;
 
   double exponent = (RSSI0 - rssi) / (10 * n);
@@ -303,7 +303,7 @@ int main() {
   }
   cerr << "[main] Serial port opened" << endl;
 
-  if (!configureSerialPort(fd, B115200)) {
+  if (!configureSerialPort(fd, B921600)) {
     close(fd);
     cerr << "[main] Error configuring serial port" << endl;
     return 1;

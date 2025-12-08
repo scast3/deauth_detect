@@ -1,5 +1,6 @@
 from plotter import tests
 import math
+import matplotlib.pyplot as plt
 from statistics import mean, median
 
 def dist(a, b):
@@ -33,7 +34,11 @@ for name, data in tests.items():
         "error": error
     })
 
-configs = ["Equilateral", "Right", "Isosceles"]
+names = [r["name"] for r in results]
+errors = [r["error"] for r in results]
+n_values = [r["n"] for r in results]
+configs = [r["config"] for r in results]
+
 summary_by_config = {}
 
 print("\n==============================")
@@ -88,3 +93,28 @@ print("==============================\n")
 for r in results:
     print(f"{r['name']:15s} | {r['config']:11s} | n={r['n']} | "
           f"Error={r['error']:.4f} m")
+    
+# ------------------------------------------------------------
+# BOX PLOTS
+# ------------------------------------------------------------
+n3_errors = [r["error"] for r in results if r["n"] == 3]
+n4_errors = [r["error"] for r in results if r["n"] == 4]
+
+equilateral_errors = [r["error"] for r in results if r["config"] == "Equilateral"]
+right_errors = [r["error"] for r in results if r["config"] == "Right"]
+iso_errors = [r["error"] for r in results if r["config"] == "Isosceles"]
+
+plt.figure(figsize=(8, 6))
+plt.boxplot([equilateral_errors, right_errors, iso_errors],
+            labels=["Equilateral", "Right", "Isosceles"])
+plt.ylabel("Localization Error (m)")
+plt.title("Error Distribution by Sensor Configuration")
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(8, 6))
+plt.boxplot([n3_errors, n4_errors], labels=["n=3", "n=4"])
+plt.ylabel("Localization Error (m)")
+plt.title("Error Distribution: n=3 vs n=4")
+plt.tight_layout()
+plt.show()
