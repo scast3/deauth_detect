@@ -2,17 +2,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 tests = {
-    "Equilateral_3": {
+    "Equilateral Config (n=3)": {
         "expected": (1.0, 0.577),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.35936},
             "78:1C:3C:2D:15:D4": {"pos": (1, 1.732), "dist": 1.35936},
             "78:1C:3C:E3:AB:CC": {"pos": (0, 0), "dist": 1.4678},
         },
-        "estimate (n=3)": (1.07665, 0.621569)
+        "estimate": (1.07665, 0.621569)
     },
 
-    "Equilateral_4": {
+    "Equilateral Config (n=4)": {
         "expected": (1.0, 0.577),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.33352},
@@ -22,7 +22,7 @@ tests = {
         "estimate": (1.05425, 0.664464)
     },
 
-    "Right_3": {
+    "Right Triangle Config (n=3)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.35936},
@@ -32,7 +32,7 @@ tests = {
         "estimate": (1.69843, 1.222)
     },
 
-    "Right_4": {
+    "Right Triangle Config (n=4)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.25893},
@@ -42,7 +42,7 @@ tests = {
         "estimate": (1.59904, 1.57216)
     },
 
-    "Iso_3": {
+    "Iso Triangle Config (n=3)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.35936},
@@ -52,7 +52,7 @@ tests = {
         "estimate": (2.68228, 1.15047)
     },
 
-    "Iso_4": {
+    "Iso Triangle Config (n=4)": {
         "expected": (1.0, 1.0),
         "sensors": {
             "00:4B:12:3C:04:B0": {"pos": (2, 0), "dist": 1.49624},
