@@ -469,6 +469,9 @@ int main() {
         cout << "[TRI] direct: (" << x << "," << y << ")\n";
       }
     }
+    int64_t after_ls = now_us();
+    cout << "LS latency: " << to_string(after_ls - before_query) << "us"
+         << endl;
 
     this_thread::sleep_for(chrono::seconds(2));
   }
