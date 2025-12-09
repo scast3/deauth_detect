@@ -12,14 +12,7 @@ for name, data in tests.items():
     expected = data["expected"]
     estimate = data["estimate"]
 
-    if "Equilateral" in name:
-        config = "Equilateral"
-    elif "Right" in name:
-        config = "Right"
-    elif "Iso" in name:
-        config = "Isosceles"
-    else:
-        config = "Unknown"
+    config = name
 
     n_value = 3 if "3" in name else 4
 
@@ -100,9 +93,9 @@ for r in results:
 n3_errors = [r["error"] for r in results if r["n"] == 3]
 n4_errors = [r["error"] for r in results if r["n"] == 4]
 
-equilateral_errors = [r["error"] for r in results if r["config"] == "Equilateral"]
-right_errors = [r["error"] for r in results if r["config"] == "Right"]
-iso_errors = [r["error"] for r in results if r["config"] == "Isosceles"]
+equilateral_errors = [r["error"] for r in results if "Equilateral" in r["config"]]
+right_errors = [r["error"] for r in results if "Right" in r["config"]]
+iso_errors = [r["error"] for r in results if "Iso" in r["config"]]
 
 plt.figure(figsize=(8, 6))
 plt.boxplot([equilateral_errors, right_errors, iso_errors],
