@@ -303,7 +303,7 @@ int main() {
   }
   cerr << "[main] Serial port opened" << endl;
 
-  if (!configureSerialPort(fd, B921600)) {
+  if (!configureSerialPort(fd, B115200)) {
     close(fd);
     cerr << "[main] Error configuring serial port" << endl;
     return 1;
