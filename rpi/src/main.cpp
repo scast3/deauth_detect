@@ -255,6 +255,7 @@ void insert_events(duckdb::Appender *appender) {
            });
 
       // Append sorted bucket to DB
+      int64_t before_insert = now_us();
       for (const auto &current_event : qbuckets[current_qbucket]) {
         /*       cerr << "[insert_events] Appending event ts=" <<
            current_event.timestamp
@@ -273,6 +274,9 @@ void insert_events(duckdb::Appender *appender) {
 
       //     cerr << "[insert_events] Flushing appender..." << endl;
       appender->Flush();
+      int64_t after_insert = now_us();
+      cout << "Batch insert execution time: "
+           << to_string(after_insert - before_insert) << "us" << endl;
 
       // Clean up old bucket and move to new one
       qbuckets.erase(current_qbucket);
@@ -355,16 +359,20 @@ int main() {
                    "FROM events "
                    "ORDER BY sensor_mac, timestamp DESC;";
 
+    int64_t before_query = now_us();
     auto result = con.Query(query); // check if fails
     if (result->HasError()) {
       cerr << "[main] Query failed: " << result->GetError() << endl;
       this_thread::sleep_for(chrono::milliseconds(200));
       continue;
     }
+    int64_t after_query = now_us();
+    cout << "Query (read) execution time: "
+         << to_string(after_query - before_query) << "us" << endl;
     // cout << "  [debug] result struct: " << result.ToString() << "\n";
 
-    // row count of this result should ideally be 3, if not, then we prob need
-    // to expand window to hit all 3 sensors
+    // row count of this result should ideally be 3, if not, then we prob
+    // need to expand window to hit all 3 sensors
 
     struct SensorReading { // calculating the averages on the window
       string sensor_mac;
