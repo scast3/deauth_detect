@@ -350,14 +350,19 @@ int main() {
     uint64_t ts_min = ts_max - window_us;
 
     // add main query here
-    string query = "SELECT DISTINCT ON (sensor_mac) "
+    string query = "SELECT "
                    "    sensor_mac, "
-                   "    rssi_mean, "
-                   "    rssi_variance, "
-                   "    frame_count, "
-                   "    timestamp "
+                   "    AVG(rssi_mean) as avg_rssi, "
+                   "    AVG(rssi_variance) as avg_variance, "
+                   "    SUM(frame_count) as total_frames "
                    "FROM events "
-                   "ORDER BY sensor_mac, timestamp DESC;";
+                   "WHERE timestamp >= " +
+                   to_string(ts_min) +
+                   " "
+                   "  AND timestamp <= " +
+                   to_string(ts_max) +
+                   " "
+                   "GROUP BY sensor_mac;";
 
     int64_t before_query = now_us();
     auto result = con.Query(query); // check if fails
